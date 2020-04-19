@@ -1,0 +1,1 @@
+powershell -file install_set_paths.ps1
