@@ -1,13 +1,23 @@
 !export raytrace
+
 fileName$ = $FILENAME()
 fNameLen = SLEN(fileName$)
 !remove extension
 fName$ = $LEFTSTRING(fileName$, fNameLen - 4)
+
 zmxPath$ = $PATHNAME()
-folder$ = zmxPath$ + "\"
+folder$ = zmxPath$ + "\" + fName$ 
 msg$ = "Files saved to " + folder$
 print msg$
+! №configpath# is a tag auto-substituted
+! by an installation srcipt
+! via find&replace
 configFolder$ = #configpath#  
+
+MAKEFOLDER folder$
+folder$ = folder$ + "\"
+
+! text windows export
 
 fPath$ = folder$ + fName$ + "_raytraceAxial.TXT"
 configPath$ = configFolder$ + "rtr_axial.CFG"
@@ -36,6 +46,14 @@ openanalysiswindow "rtr", configPath$
 currentWindow = WINL()
 savewindow currentWindow, fPath$
 closewindow currentWindow
+
+fPath$ = folder$ + fName$ + "_Prescription.TXT"
+OPENANALYSISWINDOW "pre"
+currentWindow = WINL()
+SAVEWINDOW currentWindow, fPath$
+CLOSEWINDOW currentWindow
+
+! graphics windows export to BMP
 
 fPath$ = folder$ + fName$ + "_FieldCurvDist.BMP"
 configPath$ = configFolder$ + "fcd_wave1.CFG"
@@ -90,3 +108,11 @@ EXPORTBMP currentWindow, fPath$, 500 #delay =500
 closewindow currentWindow
 fPath$ = folder$ + fName$ + "_TR_Field3.TXT"
 GETTEXTFILE fPath$, ray, configPath$, 1
+
+! generate lens data (lensdata) file
+
+!    
+!
+!
+!
+!
