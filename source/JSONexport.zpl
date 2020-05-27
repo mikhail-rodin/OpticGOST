@@ -17,7 +17,7 @@ pupilCoordsDim = 4
 DECLARE pupilCoords, double, 1, pupilCoordsDim
 pupilCoords(1) = 0 
 pupilCoords(2) = 0.5
-pupilCoords(3) = 0.7
+pupilCoords(3) = 0.707
 pupilCoords(4) = 1
 
 OUTPUT jsonFilePath$
@@ -199,6 +199,7 @@ PRINT
 ! Py = 0 ; 0,5 ; 0,7 ; 1
 ! aberrations for all wavelengths
 ! offense against the sine cond for main wave
+PRINT "Py_coord_count: ", pupilCoordsDim
 PRINT "axial: ["
 FOR i, 1, pupilCoordsDim, 1
     PRINT "  {"
@@ -299,5 +300,5 @@ PRINT "  }"
 !saggittal - transverse only
 
 PRINT "}"
-
+CONVERTFILEFORMAT jsonFilePath$, 1 !convert to ASCII
 ! cleanup so that there are no side effects
