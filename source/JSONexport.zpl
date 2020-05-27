@@ -38,8 +38,6 @@ id = OCOD("EFFL")
 ! EFFL(void, wave)
 IF (afocal_im_space == 0) THEN effl = OPEV(id, 0, primaryWave, 0, 0, 0, 0)
 
-
-
 !number of fields
 fieldCount = NFLD()
 fieldTypeID = SYPR(100)
@@ -84,19 +82,19 @@ surfCount = NSUR()
 
 PRINT "# hjson format" 
 PRINT "# postfixes: T = tangential, S = saggittal, im = image, obj = object"
-PRINT "{"
 
 str$ = "name: " + fName$
 PRINT str$
 
 FORMAT 2 INT
 PRINT "wavelength_count: ", waveCount
-PRINT "primary_wave_no: ", primaryWave
+PRINT "primary_wavelength: ", primaryWave
 PRINT "# in micrometers"
 FORMAT 4.3
 PRINT "wavelengths: ["
 FOR i, 1, waveCount, 1
-    PRINT "  ", WAVL(i)
+    str$ ="  "+ $STR(WAVL(i)) + ","
+    PRINT str$
 NEXT
 PRINT "]"
 PRINT
@@ -132,7 +130,7 @@ FOR i, 1, fieldCount, 1
     PRINT "    vignetting_compession_y: ", FVCY(i)
     PRINT "    vignetting_decenter_x: ", FVDX(i)
     PRINT "    vignetting_decenter_y: ", FVDY(i)
-    PRINT "  }"
+    PRINT "  },"
 NEXT
 PRINT "]"
 PRINT
@@ -174,7 +172,7 @@ FOR i, 1, surfCount, 1
     PRINT str$
     PRINT "    index@d: ", GIND(i)
     PRINT "    abbe: ", GABB(i)
-    PRINT "  }"
+    PRINT "  },"
 NEXT
 PRINT "]"
 ! end print surfaces
@@ -222,13 +220,13 @@ FOR i, 1, pupilCoordsDim, 1
         id = OCOD("LONA")
         ! LONA(surface, wave, zone)
         PRINT "      LONA: ", OPEV(id, 0, j, pupilCoords(i), 0, 0, 0)
-        PRINT "    }"
+        PRINT "    },"
     NEXT
     PRINT "  ]"
     id = OCOD("OSCD")
     ! OSCD(surface, wave, zone)
     PRINT "  OSCD:", OPEV(id, 0, primaryWave, pupilCoords(i), 0, 0, 0)
-    PRINT "  }"
+    PRINT "  },"
 NEXT
 PRINT "]"
 PRINT
@@ -254,7 +252,7 @@ FOR wave, 1, waveCount, 1
         ! REAY(surface, wave, Hx, Hy, Px, Py)
         PRINT "      REAY: ", OPEV(id, surfCount, wave, 0, 1, 0, 0)
     ENDIF
-    PRINT "    }"
+    PRINT "    },"
 NEXT
 PRINT "    ]"
 FORMAT 4.2
@@ -284,7 +282,7 @@ FOR wave, 1, waveCount, 1
         ! REAY(surface, wave, Hx, Hy, Px, Py)
         PRINT "      REAY: ", OPEV(id, surfCount, wave, 0, Hy, 0, 0)
     ENDIF
-    PRINT "    }"
+    PRINT "    },"
 NEXT
 PRINT "    ]"
 FORMAT 4.2
@@ -299,6 +297,5 @@ PRINT "  }"
 
 !saggittal - transverse only
 
-PRINT "}"
 CONVERTFILEFORMAT jsonFilePath$, 1 !convert to ASCII
 ! cleanup so that there are no side effects
