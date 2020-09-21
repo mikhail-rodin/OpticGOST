@@ -1,5 +1,5 @@
 Attribute VB_Name = "hjsonParse"
-
+Option Base 0
 Option Explicit
 
 Private Function parseOneLevel(ByVal jsonString As String) As Object
@@ -156,7 +156,7 @@ Private Function parseOneLevel(ByVal jsonString As String) As Object
     
     'if nothing was found
     If charType = tUNRECOGNISED Then
-        Err.Raise vbObjectError + 1100, , "not recognized as JSON"
+        'Err.Raise vbObjectError + 1100, , "not recognized as JSON"
     End If
     
     If nestLevel <> 0 Then
@@ -292,6 +292,10 @@ Public Function readTextToString(ByVal filePath As String) As String
 End Function
 
 Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
+    'creates a tree of nested dictionary from a json file
+    
+    'TODO: fix max_field
+    
     Dim outputDict As Scripting.Dictionary
     Set outputDict = New Scripting.Dictionary
 
@@ -320,33 +324,7 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
     Dim surfacesUnparsed As String
 
     Dim tempStr As String
-    Dim tempArray() As String
-
-    Dim fieldDict As Scripting.Dictionary
-    Dim fieldDicts As Collection
-    
-    Dim apertureDict As Scripting.Dictionary
-    
-    Dim axialAberDict As Scripting.Dictionary
-    Dim axialAberDicts As Collection
-    
-    Dim aberDict As Scripting.Dictionary
-    Dim aberDicts As Collection
-    
-    Dim chiefAberDict As Scripting.Dictionary
-    Dim max_imSizeDicts As Collection
-    Dim unvig_imSizeDicts As Collection
-    
-    Dim imSizeDict As Scripting.Dictionary
-    Dim imSizeDicts As Collection
-    
-    Dim maxFieldDict As Scripting.Dictionary
-    
-    Dim unvigFieldDict As Scripting.Dictionary
-    
-    Dim surfaceDict As Scripting.Dictionary
-    Dim surfaceDicts As Collection
-    
+      
     Set outputDict = parseOneLevel(jsonContents)
     
     With outputDict
@@ -358,63 +336,83 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         unvignetted_field = Val(.Item("unvignetted_field"))
         surface_count = Int(.Item("surface_count"))
         Py_coord_count = Int(.Item("Py_coord_count"))
-
-        wavelengthsUnparsed = .Item("wavelengths")
-        fieldsUnparsed = .Item("fields")
-        axialUnparsed = .Item("axial")
-        chiefUnparsed = .Item("chief")
-        surfacesUnparsed = .Item("surfaces")
         
-        tempArray = parseArray(wavelengthsUnparsed)
-        ReDim wavelengths(wavelength_count - 1)
-        For wave = 0 To (wavelength_count - 1)
-            wavelengths(wave) = Val(tempArray(wave))
-        Next wave
-        .Item("wavelengths") = wavelengths
+        Dim allWavesStr() As String
+        Dim allWaves() As Double
+        allWavesStr = parseArray(.Item("wavelengths"))
+        ReDim allWaves(wavelength_count - 1)
+        For i = 0 To (wavelength_count - 1)
+            allWaves(i) = Val(allWavesStr(i))
+        Next i
+        .Item("wavelengths") = allWaves
         'wavelenght array added
         
+        Dim fieldDict As Scripting.Dictionary
+        Dim fieldDicts As Collection
         Set fieldDicts = New Collection
-        For field = BASE To field_count - 1
+        Dim fieldsArr() As String
+        fieldsArr = delEmptyLines(parseArray(.Item("fields")))
+        Dim fieldStr As Variant
+        For Each fieldStr In fieldsArr
             Set fieldDict = New Scripting.Dictionary
             Set fieldDict = _
-                parseOneLevel(withoutOuterBrackets(parseArray(fieldsUnparsed)(field)))
+                parseOneLevel(withoutOuterBrackets(fieldStr))
             fieldDicts.Add fieldDict
-        Next field
+        Next fieldStr
         Set .Item("fields") = fieldDicts
         'fields dict added
         
+        Dim surfaceDict As Scripting.Dictionary
+        Dim surfaceDicts As Collection
         Set surfaceDicts = New Collection
         For surf = BASE To surface_count - 1
             Set surfaceDict = New Scripting.Dictionary
             Set surfaceDict = _
-                parseOneLevel(withoutOuterBrackets(parseArray(surfacesUnparsed)(surf)))
+                parseOneLevel(withoutOuterBrackets(parseArray(.Item("surfaces"))(surf)))
             surfaceDicts.Add surfaceDict
         Next surf
         Set .Item("surfaces") = surfaceDicts
         'surfaces dict added
         
-        Set axialAberDicts = New Collection
-        For coord = BASE To Py_coord_count - 1
-        'add axial aberrations for each Py
-            Set axialAberDict = New Scripting.Dictionary
-            Set axialAberDict = _
-                parseOneLevel(withoutOuterBrackets(parseArray(axialUnparsed)(coord)))
-            
-            'add an array of aberObjects for each wave to "aberrations" key
-            ReDim tempArray(wavelength_count)
-            tempArray = parseArray(axialAberDict(coord).Item("aberrations"))
-            For wave = BASE To wavelength_count - 1
-                Set aberDict = New Scripting.Dictionary
-                Set aberDict = _
-                    parseOneLevel(withoutOuterBrackets(tempArray(wave)))
-                aberDicts.Add aberDict
-            Next wave
-            Set axialAberDict.Item("aberrations") = aberDicts
-            axialAberDicts.Add axialAberDict
-        Next coord
-        Set .Item("axial") = axialAberDicts
-        'axial aberration dict added
-
+        Dim apertureDict As Scripting.Dictionary
+        Set apertureDict = New Scripting.Dictionary
+        Set apertureDict = parseOneLevel(withoutOuterBrackets(.Item("aperture_data")))
+        Set .Item("aperture_data") = apertureDict
+        'aperture data dict added
+        
+        Dim axCoordDict As Scripting.Dictionary
+        Dim axCoordDicts As Collection
+        Dim axWaveDict As Scripting.Dictionary
+        Dim axWaveDicts As Collection
+        Dim coordsArray() As String
+        Set axCoordDicts = New Collection
+        coordsArray = delEmptyLines(parseArray(.Item("axial")))
+        Dim PCoord As Variant
+        For Each PCoord In coordsArray
+            Set axCoordDict = New Scripting.Dictionary
+            Set axCoordDict = _
+                parseOneLevel(withoutOuterBrackets(PCoord))
+            Dim wavesArray() As String
+            'ReDim wavesArray(wavelength_count) 'array of unparsed aber data (as strings)
+            wavesArray = delEmptyLines(parseArray(axCoordDict.Item("aberrations")))
+            'now we'll parse aber data for every wavelength
+            Set axWaveDicts = New Collection
+            Dim axWave As Variant
+            For Each axWave In wavesArray
+                Set axWaveDict = New Scripting.Dictionary
+                Set axWaveDict = parseOneLevel(withoutOuterBrackets(axWave))
+                axWaveDicts.Add axWaveDict
+            Next axWave
+            Set axCoordDict.Item("aberrations") = axWaveDicts
+            axCoordDicts.Add axCoordDict
+        Next PCoord
+        Set .Item("axial") = axCoordDicts
+        
+        Dim chiefAberDict As Scripting.Dictionary
+        Dim maxFieldDict As Scripting.Dictionary
+        Dim unvigFieldDict As Scripting.Dictionary
+        Dim max_imSizeDicts As Collection
+        Dim unvig_imSizeDicts As Collection
         Set chiefAberDict = New Scripting.Dictionary
         Set chiefAberDict = _
             parseOneLevel(withoutOuterBrackets(.Item("chief")))
@@ -427,50 +425,43 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         Set unvigFieldDict = _
             parseOneLevel(withoutOuterBrackets(chiefAberDict.Item("unvignetted_field")))
         Set .Item("unvignetted_field") = unvigFieldDict
-
-        ReDim tempArray(wavelength_count)
-        Set max_imSizeDicts = New Collection
-        'populate a chiefAberObject first with max field image size data
-        tempArray = parseArray(maxFieldDict.Item("image_size"))
-        For wave = BASE To wavelength_count - 1
-            Set imSizeDict = New Scripting.Dictionary
-            'get image size value for max field at this wave
-            Set imSizeDict = parseOneLevel(withoutOuterBrackets(tempArray(wave)))
-            max_imSizeDicts.Add imSizeDict
-        Next wave
-        Set maxFieldDict.Item("image_size") = max_imSizeDicts
-        
-        Set unvig_imSizeDicts = New Collection
-        tempArray = parseArray(unvigFieldDict.Item("image_size"))
-        For wave = BASE To wavelength_count - 1
-            Set imSizeDict = New Scripting.Dictionary
-            'get image size value for max field at this wave
-            Set imSizeDict = parseOneLevel(withoutOuterBrackets(tempArray(wave)))
-            unvig_imSizeDicts.Add imSizeDict
-        Next wave
-        Set unvigFieldDict.Item("image_size") = unvig_imSizeDicts
-        
-        Set .Item("chief").Item("max_field") = maxFieldDict
-        Set .Item("chief").Item("unvignetted_field") = unvigFieldDict
-
     End With
 
     Set jsonToDict = outputDict
-    Set outputDict = Nothing
 End Function
-
+Function delEmptyLines(strArr() As String) As String()
+    Dim outArr() As String
+    Dim i As Integer
+    For i = 0 To UBound(strArr)
+        If Replace(strArr(i), " ", "") <> "" Then
+            ReDim Preserve outArr(i)
+            outArr(i) = strArr(i)
+        Else
+            Exit For
+        End If
+    Next i
+    delEmptyLines = outArr
+End Function
 Public Sub printInfo(ByVal info As String)
     With jsonForm.outputTB
         .text = .text & vbCrLf & info
     End With
 End Sub
-
+Public Sub printStatus(ByVal info As String)
+    With jsonForm.status
+        .Caption = .text & vbCrLf & info
+    End With
+End Sub
 Public Sub rinseInfo()
     With jsonForm.outputTB
         .text = ""
     End With
 End Sub
-
+Public Sub rinseStatus()
+    With jsonForm.status
+        .Caption = ""
+    End With
+End Sub
 Private Function withoutOuterBrackets(ByVal str As String) As String
     'remove outer {}:
     Dim firstChar As String
@@ -490,5 +481,71 @@ Private Function withoutOuterBrackets(ByVal str As String) As String
     End If
     withoutOuterBrackets = str
 End Function
+
+Public Sub displayDict(dict As Scripting.Dictionary)
+    'prints out dictionary contents in a window
+    
+    Static Txt As String
+    Static i As Integer
+    
+    With dict
+        printInfo ("Имя системы: " & dict.Item("name"))
+        printInfo ("Число заданных длин волн: " & .Item("wavelength_count"))
+        printInfo ("Основная длина волны: " & .Item("primary_wavelength"))
+        printInfo ("Тип задания поля: " & .Item("field_type"))
+        printInfo ("Число заданных величин поля: " & .Item("field_count"))
+        'Txt = Txt & "Полное поле: " & .Item("max_field") & vbCrLf
+        'Txt = Txt & "Невиньетированное поле: " & .Item("unvignetted_field") & vbCrLf
+        printInfo ("Число поверхностей: " & .Item("surface_count"))
+        printInfo ("Число заданных длин волн: " & .Item("wavelength_count"))
+        
+        printInfo ("Длины волн:")
+        For i = 0 To Val(.Item("wavelength_count")) - 1
+            printInfo (.Item("wavelengths")(i) & ", ")
+        Next i
+        printInfo ("")
+        printInfo ("Апертурные характеристики:")
+        With .Item("aperture_data")
+            printInfo ("  Тип апертуры: " & .Item("type"))
+            printInfo ("  Величина апертуры: " & .Item("value"))
+            printInfo ("  Диаметр входного зрачка: " & .Item("D_im"))
+            printInfo ("  Диаметр выходного зрачка: " & .Item("D_obj"))
+            printInfo ("  Положение входного зрачка: " & .Item("ENPP") & " от первой поверхности")
+            printInfo ("  Положение выходного зрачка: " & .Item("EXPP") & " от плоскости изображения")
+        End With
+        printInfo ("")
+        
+        printInfo ("Поверхности:")
+        Dim surf As Scripting.Dictionary
+        Dim radius, curvature, thickness As Double
+        For Each surf In .Item("surfaces")
+            curvature = Val(surf.Item("curvature"))
+            If curvature = 0 Then
+                radius = 0
+            Else
+                radius = 1 / curvature
+            End If
+            thickness = Val(surf.Item("thickness"))
+            printInfo (surf.Item("no") & "  " & radius & "  " & thickness & surf.Item("glass"))
+        Next surf
+        
+        Dim axialRay As Scripting.Dictionary
+        Dim axialAberDict As Scripting.Dictionary
+        Dim wave As Integer
+        Dim Py, TRAY, LONA, OSCD As Double
+        printInfo ("Py  волна   TRAY     LONA")
+        For Each axialRay In .Item("axial")
+            Py = Val(axialRay.Item("Py"))
+            OSCD = Val(axialRay.Item("OSCd"))
+            For Each axialAberDict In axialRay.Item("aberrations")
+                wave = Int(axialAberDict.Item("wave"))
+                TRAY = Val(axialAberDict.Item("TRAY"))
+                LONA = Val(axialAberDict.Item("LONA"))
+                printInfo (Py & "  " & str(wave) & "   " & str(TRAY) & "  " & str(LONA) & "  ")
+            Next axialAberDict
+        Next axialRay
+    End With
+    
+End Sub
 
 
