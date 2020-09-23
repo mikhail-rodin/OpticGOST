@@ -23,4 +23,4 @@ PRINT "Px: 0"
 PRINT "Py_count: 4"
 PRINT "Py: 0 0.5 0.7 1"
 
-!CONVERTFILEFORMAT jsonFilePath$, 1 
+CONVERTFILEFORMAT FilePath$, 1 

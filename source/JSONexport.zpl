@@ -29,6 +29,7 @@ DECLARE Hx, double, 1, 50
 DECLARE Hy, double, 1, 50
 DECLARE Px, double, 1, 50
 DECLARE Py, double, 1, 50
+! defaults
 Py(1) = 0 
 Py(2) = 0.5
 Py(3) = 0.707
@@ -40,6 +41,7 @@ Hx_count = 1
 Hy_count = 1
 Px_count = 1
 Py_count = 4
+! TODO: fallback to defaults in case config can't be read
 configFilePath$ = zmxPath$ + "\" + fName$ + "_config.txt"
 OPEN configFilePath$
 LABEL 10
@@ -47,9 +49,9 @@ IF EOFF() THEN GOTO 20
 READSTRING confLine$
 first$ = $GETSTRING(confLine$,1)
 IF first$ $== "#" THEN GOTO 10
-!IF first$ $== "Hx_count:" 
-    !Hx_count = SVAL($GETSTRING(confLine$,2))
-    !GOTO 10
+IF first$ $== "Hx_count:" 
+    Hx_count = SVAL($GETSTRING(confLine$,2))
+    GOTO 10
 ELSE
     IF first$ $== "Hy_count:" 
         Hy_count = SVAL($GETSTRING(confLine$, 2))
@@ -97,26 +99,19 @@ ENDIF
 LABEL 20
 CLOSE 
 
+msg$ = "Saving lens data to " + jsonFilePath$
+PRINT msg$
 
 OUTPUT jsonFilePath$
 
-!variables
-!   str$  -  (string) temp for writing to file
-!   val   -  (float) temp  
-!   id    -  (int) operand 
-!   noreturn  - (null) for calling functions that don't return anything useful (SYPR() etc)
-
-!number of wavelengths
 waveCount = NWAV()
 primaryWave = PWAV()
 
 afocal_im_space = SYPR(18)
-! 0 = false, 1 = true
 id = OCOD("EFFL")
 ! EFFL(void, wave)
 IF (afocal_im_space == 0) THEN effl = OPEV(id, 0, primaryWave, 0, 0, 0, 0)
 
-!number of fields
 fieldCount = NFLD()
 fieldTypeID = SYPR(100)
 ! 0 for angle
@@ -127,14 +122,12 @@ maxField = MAXF()
 
 apertureType = SYPR(10)
 ! 0 for entrance pupil diameter
-! 1 for image space F/#
-! 2 for object space num aperture NA
-! 3 for float by stop size
+! 1 for image space F/# ! 2 for object space num aperture NA ! 3 for float by stop size
 ! 4 for paraxial working F/#
 ! 5 for object cone angle in degrees
 apertureValue = SYPR(11)
-id = OCOD("ENPD")
-! ENPD(void)
+! EXPD(void)
+id = OCOD("EXPD")
 exitPupilDiam = OPEV(id, 0, 0, 0, 0, 0, 0)
 IF (apertureType == 0) 
     entrPupilDiam = apertureValue
@@ -142,11 +135,12 @@ ELSE
     IF (apertureType == 1)
         entrPupilDiam = effl/apertureValue
     ELSE
-        id = OCOD("ENPD")
         ! EPDI(void)
+        id = OCOD("EPDI")         
         entrPupilDiam = OPEV(id, 0,0,0,0,0,0)
     ENDIF
 ENDIF
+! end of buggy code
 id = OCOD("ENPP")
 entrPupilPos = OPEV(id, 0,0,0,0,0,0)
 id = OCOD("EXPP")
@@ -167,12 +161,15 @@ PRINT "wavelength_count: ", waveCount
 PRINT "primary_wavelength: ", primaryWave
 PRINT "# in micrometers"
 FORMAT 4.3
-PRINT "wavelengths: ["
+wavelist$ = "wavelengths: ["
 FOR i, 1, waveCount, 1
-    str$ ="  "+ $STR(WAVL(i)) + ","
-    PRINT str$
+    IF i > 1
+        wavelist$ = wavelist$ + ", "
+    ENDIF
+    wavelist$ = wavelist$ + $STR(WAVL(i)) 
 NEXT
-PRINT "]"
+wavelist$ = wavelist$ + "]"
+PRINT wavelist$
 PRINT
 
 FORMAT 3 INT
@@ -187,8 +184,7 @@ PRINT "# full half-field angle or height"
 FORMAT 6.3
 str$ = "max_field: " + $STR(maxField)
 PRINT str$
-! PRINT "unvignetted_field: ", unvignettedField
-SETVIG #calculate vignetting 
+SETVIG 
 PRINT "fields: ["
 FOR i, 1, fieldCount, 1
     PRINT "  {"
@@ -221,15 +217,14 @@ PRINT
 FORMAT 3 INT
 PRINT "surface_count: ", surfCount
 
-!print surfaces
 PRINT "# index is 0 for air in Zemax"
 PRINT "surfaces: ["
 FOR i, 1, surfCount, 1
     FORMAT 3 INT
-    PRINT "  { no: ", i
+    PRINT "  { no       : ", i
     noreturn = SPRO(i, 1)
     str$ = $BUFFER()
-    PRINT "    type: ", str$
+    PRINT "    type     : ", str$
     FORMAT 12.6 
     id = OCOD("POWR")
     PRINT "    power    : ", OPEV(id, i, primaryWave, 0, 0, 0, 0)
@@ -246,14 +241,6 @@ FOR i, 1, surfCount, 1
     PRINT "  },"
 NEXT
 PRINT "]"
-! end print surfaces
-PRINT
-PRINT
-PRINT "#Aberrations are calculated for axial and two fields:"
-PRINT "#1. axial"
-PRINT "#2. full half-field w, linear vignetting k = 0.5"
-PRINT "#3. unvignetted field, k = 1"
-PRINT "#Aberrations are calculated for every wavelength."
 PRINT
 PRINT "maximum: {"
 id = OCOD("DIMX")
@@ -263,11 +250,6 @@ PRINT "    DIMX_percent: ", OPEV(id, 0, primaryWave, 0, 0, 0,0)
 PRINT "}"
 PRINT
 
-!axial - transverse & longitudinal
-! paraxial and for varying Py up to 1
-! Py = 0 ; 0,5 ; 0,7 ; 1
-! aberrations for all wavelengths
-! offense against the sine cond for main wave
 PRINT "axial: ["
 FOR i, 1, Px_count, 1
     FOR j, 1, Py_count, 1
@@ -326,9 +308,6 @@ NEXT
 PRINT "]"
 PRINT
 
-!chief ray - transverse only
-!image size for all waves
-!rest of parameters for the main wave
 PRINT "chief: ["
 FOR i, 1, Hx_count, 1
     FOR j, 1, Hy_count, 1
@@ -358,7 +337,7 @@ FOR i, 1, Hx_count, 1
                 ENDIF
                 ! REAX(surface, wave, Hx, Hy, Px, Py)
                 opval = OPEV(id, surfCount, wave, 0, 1, 0, 0)
-                reax$ = reax$ + $STR(opval) + ", "
+                reax$ = reax$ + $STR(opval) 
             NEXT
             reax$ = reax$ + "]"
             PRINT reax$ 
@@ -370,7 +349,7 @@ FOR i, 1, Hx_count, 1
                 ENDIF
                 ! REAY(surface, wave, Hx, Hy, Px, Py)
                 opval = OPEV(id, surfCount, wave, 0, 1, 0, 0)
-                reay$ = reay$ + $STR(opval) + ", "
+                reay$ = reay$ + $STR(opval) 
             NEXT
             reay$ = reay$ + "]"
             PRINT reay$ 
@@ -383,5 +362,3 @@ FOR i, 1, Hx_count, 1
     NEXT
 NEXT
 PRINT "]"
-!CONVERTFILEFORMAT jsonFilePath$, 1 !convert to ASCII
-! cleanup so that there are no side effects
