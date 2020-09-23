@@ -292,7 +292,7 @@ Public Function readTextToString(ByVal filePath As String) As String
 End Function
 
 Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
-    'creates a tree of nested dictionary from a json file
+'creates a tree of nested dictionary from a json file
     
     'TODO: fix max_field
     
@@ -314,14 +314,6 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
     Dim Py_coord_count As Integer
 
     Dim wavelengths() As Double
-    
-    Dim axialUnparsed As String
-    Dim aperture_dataUnparsed As String
-    Dim fieldsUnparsed As String
-    Dim chiefUnparsed As String
-    Dim image_sizeUnparsed() As String
-    Dim wavelengthsUnparsed As String
-    Dim surfacesUnparsed As String
 
     Dim tempStr As String
       
@@ -339,7 +331,7 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         
         Dim allWavesStr() As String
         Dim allWaves() As Double
-        allWavesStr = parseArray(.Item("wavelengths"))
+        allWavesStr = delEmptyLines(parseArray(.Item("wavelengths")))
         ReDim allWaves(wavelength_count - 1)
         For i = 0 To (wavelength_count - 1)
             allWaves(i) = Val(allWavesStr(i))
@@ -380,53 +372,45 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         Set .Item("aperture_data") = apertureDict
         'aperture data dict added
         
-        Dim axCoordDict As Scripting.Dictionary
-        Dim axCoordDicts As Collection
-        Dim axWaveDict As Scripting.Dictionary
-        Dim axWaveDicts As Collection
-        Dim coordsArray() As String
-        Set axCoordDicts = New Collection
-        coordsArray = delEmptyLines(parseArray(.Item("axial")))
-        Dim PCoord As Variant
-        For Each PCoord In coordsArray
-            Set axCoordDict = New Scripting.Dictionary
-            Set axCoordDict = _
-                parseOneLevel(withoutOuterBrackets(PCoord))
-            Dim wavesArray() As String
-            'ReDim wavesArray(wavelength_count) 'array of unparsed aber data (as strings)
-            wavesArray = delEmptyLines(parseArray(axCoordDict.Item("aberrations")))
-            'now we'll parse aber data for every wavelength
-            Set axWaveDicts = New Collection
-            Dim axWave As Variant
-            For Each axWave In wavesArray
-                Set axWaveDict = New Scripting.Dictionary
-                Set axWaveDict = parseOneLevel(withoutOuterBrackets(axWave))
-                axWaveDicts.Add axWaveDict
-            Next axWave
-            Set axCoordDict.Item("aberrations") = axWaveDicts
-            axCoordDicts.Add axCoordDict
-        Next PCoord
-        Set .Item("axial") = axCoordDicts
+        Dim axialDicts As Collection
+        Set axialDicts = New Collection
+        Dim axialArr() As String
+        axialArr = delEmptyLines(parseArray(.Item("axial")))
+        Dim axialObjUnparsed As Variant
+        For Each axialObjUnparsed In axialArr
+            Dim axialDict As Scripting.Dictionary
+            Set axialDict = New Scripting.Dictionary
+            Set axialDict = parseOneLevel(withoutOuterBrackets(axialObjUnparsed))
+            With axialDict
+                .Item("TRAX") = delEmptyLines(parseArray(.Item("TRAX")))
+                .Item("TRAY") = delEmptyLines(parseArray(.Item("TRAY")))
+                .Item("LONA") = delEmptyLines(parseArray(.Item("LONA")))
+            End With
+            axialDicts.Add axialDict
+        Next axialObjUnparsed
+        Set .Item("axial") = axialDicts
         
-        Dim chiefAberDict As Scripting.Dictionary
-        Dim maxFieldDict As Scripting.Dictionary
-        Dim unvigFieldDict As Scripting.Dictionary
-        Dim max_imSizeDicts As Collection
-        Dim unvig_imSizeDicts As Collection
-        Set chiefAberDict = New Scripting.Dictionary
-        Set chiefAberDict = _
-            parseOneLevel(withoutOuterBrackets(.Item("chief")))
-        Set .Item("chief") = chiefAberDict
-        Set maxFieldDict = New Scripting.Dictionary
-        Set maxFieldDict = _
-            parseOneLevel(withoutOuterBrackets(chiefAberDict.Item("max_field")))
-        Set .Item("max_field") = maxFieldDict
-        Set unvigFieldDict = New Scripting.Dictionary
-        Set unvigFieldDict = _
-            parseOneLevel(withoutOuterBrackets(chiefAberDict.Item("unvignetted_field")))
-        Set .Item("unvignetted_field") = unvigFieldDict
+        Dim chiefDicts As Collection
+        Set chiefDicts = New Collection
+        Dim chiefArr() As String
+        chiefArr = delEmptyLines(parseArray(.Item("chief")))
+        Dim chiefObjUnparsed As Variant
+        For Each chiefObjUnparsed In axialArr
+            Dim chiefDict As Scripting.Dictionary
+            Set chiefDict = New Scripting.Dictionary
+            Set chiefDict = parseOneLevel(withoutOuterBrackets(chiefObjUnparsed))
+            With chiefDict
+                .Item("REAX") = delEmptyLines(parseArray(.Item("REAX")))
+                .Item("REAY") = delEmptyLines(parseArray(.Item("REAY")))
+            End With
+            chiefDicts.Add chiefDict
+        Next chiefObjUnparsed
+        Set .Item("chief") = chiefDicts
+        
+        Dim maxAberDict As Scripting.Dictionary
+        Set maxAberDict = New Scripting.Dictionary
+        Set .Item("maximum") = parseOneLevel(withoutOuterBrackets(.Item("maximum")))
     End With
-
     Set jsonToDict = outputDict
 End Function
 Function delEmptyLines(strArr() As String) As String()
@@ -528,22 +512,6 @@ Public Sub displayDict(dict As Scripting.Dictionary)
             thickness = Val(surf.Item("thickness"))
             printInfo (surf.Item("no") & "  " & radius & "  " & thickness & surf.Item("glass"))
         Next surf
-        
-        Dim axialRay As Scripting.Dictionary
-        Dim axialAberDict As Scripting.Dictionary
-        Dim wave As Integer
-        Dim Py, TRAY, LONA, OSCD As Double
-        printInfo ("Py  волна   TRAY     LONA")
-        For Each axialRay In .Item("axial")
-            Py = Val(axialRay.Item("Py"))
-            OSCD = Val(axialRay.Item("OSCd"))
-            For Each axialAberDict In axialRay.Item("aberrations")
-                wave = Int(axialAberDict.Item("wave"))
-                TRAY = Val(axialAberDict.Item("TRAY"))
-                LONA = Val(axialAberDict.Item("LONA"))
-                printInfo (Py & "  " & str(wave) & "   " & str(TRAY) & "  " & str(LONA) & "  ")
-            Next axialAberDict
-        Next axialRay
     End With
     
 End Sub
