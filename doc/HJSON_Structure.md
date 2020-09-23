@@ -12,8 +12,6 @@ Top level parameters:
     1. max_field, float, field units
     1. unvignetted_field, float, field units
     1. surface_count, int
-1. Parameters used by parser
-    1. coord_count, int #number of [Px,Py] coord pairs
 1. wavelengths, float[nWaves], in micrometers
 1. fields, field_t[nFields]
 1. aperture_data, aperture_t
