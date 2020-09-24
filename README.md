@@ -9,9 +9,9 @@ OpticGOST - набор инструментов (а именно - макрос�
 #### [В версии 1.3] Автозаполнение таблиц оптического выпуска по данным из файла lensdata.json
 
 #### Создание таблицы конструктивных данных по файлу Prescription Data
-![prescription_data_import](/blob/master/screenshots/prescription_import.png?raw=true)
+![prescription_data_import](./screenshots/prescription_import.png?raw=true)
 #### Заполнение таблицы хода лучей по файлам Zemax Raytrace
-![raytrace_import](blob/master/screenshots/raytrace_import.png?raw=true)
+![raytrace_import](./screenshots/raytrace_import.png?raw=true)
 
 4 файла Raytrace для апертурного, главного, верхнего и нижнего лучей автоматически экспортируются с нужными настройками макросом ReportsExport.zpl. 
 
@@ -25,7 +25,7 @@ OpticGOST - набор инструментов (а именно - макрос�
 
 1. В параметрах Excel разрешите выполнение надстроек без цифровой подписи:
 
-![excel_security_settings](blob/master/screenshots/security.png?raw=true)
+![excel_security_settings](./screenshots/security.png?raw=true)
 	
 2. Перейдите в меню активации надстроек:
 
