@@ -6,3 +6,5 @@ $configDir = '"' + $dir + '\config\' + '"'
 Set-Location -Path $dir -PassThru
 (gc source\reportsExportTemplate.zpl) -replace '#configpath#', $configDir | Out-File -encoding ASCII analysis_export.zpl
 Copy-Item analysis_export.zpl -Destination $macrosFolder
+Copy-Item .\source\JSONconfig.zpl -Destination $macrosFolder
+Copy-Item .\source\JSONexport.zpl -Destination $macrosFolder
