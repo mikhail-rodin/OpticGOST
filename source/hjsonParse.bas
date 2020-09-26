@@ -5,16 +5,16 @@ Option Explicit
 Private Function parseOneLevel(ByVal jsonString As String) As Object
 'outputs a dictionary
 'doesn't parse arrays: parseArray(str) is used for that
-    Static position As Long 'no of characters in string
-    Static key, value As String
-    Static currentChar As String
+    Dim position As Long 'no of characters in string
+    Dim key, value As String
+    Dim currentChar As String
     
-    Static arrayFlag As Boolean
-    Static objectFlag As Boolean
+    Dim arrayFlag As Boolean
+    Dim objectFlag As Boolean
     '1 if we're inside an array
-    Static arrayCounter As Long
+    Dim arrayCounter As Long
     
-    Static charType As Integer
+    Dim charType As Integer
     Const tUNRECOGNISED As Integer = 0
     Const tCOMMENT As Integer = 1
     Const tKEY As Integer = 2
@@ -25,7 +25,7 @@ Private Function parseOneLevel(ByVal jsonString As String) As Object
 
     Const arrayBASE As Integer = 1
     
-    Static nestLevel As Integer
+    Dim nestLevel As Integer
     'only the top-level object is parsed
     'this var is used to prevent the function
     'from exiting on a nested "]" or "}" instead of the top-level "]"/"}"
@@ -174,14 +174,14 @@ End Function
 
 Private Function parseArray(ByVal jsonString As String) As String()
 'outputs a dictionary
-    Static position As Long 'no of characters in string
-    Static currentChar As String
-    Static arrayCounter As Long
-    Static commentFlag As Boolean
+    Dim position As Long 'no of characters in string
+    Dim currentChar As String
+    Dim arrayCounter As Long
+    Dim commentFlag As Boolean
     
     Const arrayBASE As Integer = 0
     
-    Static nestLevel As Integer
+    Dim nestLevel As Integer
     'only the top-level array is parsed
     'this var is used to prevent the function
     'from exiting on a nested "]" instead of the top-level "]"
@@ -271,8 +271,8 @@ Private Function parseArray(ByVal jsonString As String) As String()
 End Function
 
 Public Function readTextToString(ByVal filePath As String) As String
-    Static fileID As Integer
-    Static buffer As String
+    Dim fileID As Integer
+    Dim buffer As String
     
     fileID = FreeFile()
     
@@ -410,6 +410,69 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         Dim maxAberDict As Scripting.Dictionary
         Set maxAberDict = New Scripting.Dictionary
         Set .Item("maximum") = parseOneLevel(withoutOuterBrackets(.Item("maximum")))
+        
+        Dim tangDicts As Collection
+        Set tangDicts = New Collection
+        Dim tangArr() As String
+        tangArr = delEmptyLines(parseArray(.Item("tangential")))
+        Dim tangObjUnparsed As Variant
+        For Each tangObjUnparsed In tangArr
+            Dim tangDict As Scripting.Dictionary
+            Set tangDict = New Scripting.Dictionary
+            Set tangDict = parseOneLevel(withoutOuterBrackets(tangObjUnparsed))
+            With tangDict
+                Dim aberArr() As String
+                Dim aberDicts As Collection
+                Set aberDicts = New Collection
+                aberArr = delEmptyLines(parseArray(.Item("aberrations")))
+                Dim aberObjUnparsed As Variant
+                For Each aberObjUnparsed In aberArr
+                    Dim aberDict As Scripting.Dictionary
+                    Set aberDict = New Scripting.Dictionary
+                    Set aberDict = parseOneLevel(withoutOuterBrackets(aberObjUnparsed))
+                    With aberDict
+                        .Item("TRAX") = delEmptyLines(parseArray(.Item("TRAX")))
+                        .Item("TRAY") = delEmptyLines(parseArray(.Item("TRAY")))
+                        .Item("ANAX") = delEmptyLines(parseArray(.Item("ANAX")))
+                        .Item("ANAY") = delEmptyLines(parseArray(.Item("ANAY")))
+                    End With
+                    aberDicts.Add aberDict
+                Next aberObjUnparsed
+                Set .Item("aberrations") = aberDicts
+            End With
+            tangDicts.Add tangDict
+        Next tangObjUnparsed
+        Set .Item("tangential") = tangDicts
+        
+        Dim sagDicts As Collection
+        Set sagDicts = New Collection
+        Dim sagArr() As String
+        sagArr = delEmptyLines(parseArray(.Item("sagittal")))
+        Dim sagObjUnparsed As Variant
+        For Each sagObjUnparsed In sagArr
+            Dim sagDict As Scripting.Dictionary
+            Set sagDict = New Scripting.Dictionary
+            Set sagDict = parseOneLevel(withoutOuterBrackets(sagObjUnparsed))
+            With sagDict
+                Set aberDicts = New Collection
+                aberArr = delEmptyLines(parseArray(.Item("aberrations")))
+                For Each aberObjUnparsed In aberArr
+                    Set aberDict = New Scripting.Dictionary
+                    Set aberDict = parseOneLevel(withoutOuterBrackets(aberObjUnparsed))
+                    With aberDict
+                        .Item("TRAX") = delEmptyLines(parseArray(.Item("TRAX")))
+                        .Item("TRAY") = delEmptyLines(parseArray(.Item("TRAY")))
+                        .Item("ANAX") = delEmptyLines(parseArray(.Item("ANAX")))
+                        .Item("ANAY") = delEmptyLines(parseArray(.Item("ANAY")))
+                    End With
+                    aberDicts.Add aberDict
+                Next aberObjUnparsed
+                Set .Item("aberrations") = aberDicts
+            End With
+            sagDicts.Add sagDict
+        Next sagObjUnparsed
+        Set .Item("sagittal") = sagDicts
+        
     End With
     Set jsonToDict = outputDict
 End Function
@@ -469,8 +532,8 @@ End Function
 Public Sub displayDict(dict As Scripting.Dictionary)
     'prints out dictionary contents in a window
     
-    Static Txt As String
-    Static i As Integer
+    Dim Txt As String
+    Dim i As Integer
     
     With dict
         printInfo ("Имя системы: " & dict.Item("name"))

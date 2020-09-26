@@ -6,13 +6,25 @@
 ! using the OpticGOST add-in. 
 !
 ! The JSON file is saved alongside the zmx file. 
-! A config.txt file has to be generated with a JSONconfig macro
-! before exporting to JSON. Coordinates of rays traced to calculate 
-! aberrations are specified in config.txt. Thus you have the flexibility
-! to find chief ray aberrations for unvignetted field, for example. 
+! A config.txt file has to be generated with a JSONconfig macro before exporting to JSON. 
+!
+! Pupil coords for calculating aberrations are set in config.txt. Thus you have the flexibility
+! to set as many points on the pupil as you will.
+!
+! Aberrations are calculated for every field value set in Zemax: 
+! if either Hx=0 or Hy=0 for a field (which's usually the case), X and Y axes
+! correspond to tangential&sagittal, and isolated T&S aberrations will be calculated for it.
 !
 ! https://github.com/mikhail-rodin/OpticGOST
 
+PRINT 
+PRINT "+---------------------------------------------+"
+PRINT "|            OpticGOST v1.2.1                 |"
+PRINT "| https://github.com/mikhail-rodin/OpticGOST  |"
+PRINT "+---------------------------------------------+"
+PRINT "|          JSON lens data export              |"
+PRINT "+---------------------------------------------+"
+PRINT
 fileName$ = $FILENAME()
 fNameLen = SLEN(fileName$)
 !remove extension
@@ -41,38 +53,70 @@ Py_count = 4
 ! TODO: fallback to defaults in case config can't be read
 configFilePath$ = zmxPath$ + "\" + fName$ + "_config.txt"
 OPEN configFilePath$
+lineCounter = 0
+PRINT "Reading export settings from"
+PRINT configFilePath$
+PRINT
 LABEL 10
-IF EOFF() THEN GOTO 20
 READSTRING confLine$
+IF EOFF() == 1
+    FORMAT 4 INT
+    msg$ = "Config parsing completed, " + $STR(lineCounter) + " lines read."
+    PRINT msg$
+    PRINT 
+    GOTO 20
+ENDIF
+lineCounter = lineCounter + 1
+FORMAT 6.4
 first$ = $GETSTRING(confLine$,1)
 IF first$ $== "#" THEN GOTO 10
 IF first$ $== "Px_count:" 
-    Px_count = SVAL($GETSTRING(confLine$,2))
+    str$ = $GETSTRING(confLine$,2)
+    Px_count = SVAL(str$)
     GOTO 10
 ELSE
     IF first$ $== "Py_count:" 
-        Py_count = SVAL($GETSTRING(confLine$,2))
+        str$ = $GETSTRING(confLine$,2)
+        Py_count = SVAL(str$)
         GOTO 10
     ELSE
-                IF first$ $== "Px" 
-                    FOR i, 1, Px_count, 1
-                    Px(i) = SVAL($GETSTRING(confLine$,i+1))
-                    NEXT
-                    GOTO 10
-                ELSE
-                    IF first$ $== "Py" 
-                        FOR i, 1, Py_count, 1
-                        Py(i) = SVAL($GETSTRING(confLine$,i+1))
-                        NEXT
-                        GOTO 10
-                    ENDIF
-                ENDIF
+        IF first$ $== "Px:" 
+            FOR i, 1, Px_count, 1
+                str$ = $GETSTRING(confLine$,i+1)
+                Px(i) = SVAL(str$)
+            NEXT
+            GOTO 10
+        ELSE
+            IF first$ $== "Py:" 
+                FOR i, 1, Py_count, 1
+                    str$ = $GETSTRING(confLine$,i+1)
+                    Py(i) = SVAL(str$)
+                NEXT
+                GOTO 10
+            ENDIF
+        ENDIF
     ENDIF
 ENDIF
+GOTO 10
 LABEL 20
 CLOSE 
 
-msg$ = "Saving lens data to " + jsonFilePath$
+FORMAT 6.3
+PRINT "Px coords from config:"
+Px$ = ""
+FOR i, 1, Px_count, 1
+    Px$ = Px$ + " " + $STR(Px(i))
+NEXT
+PRINT Px$
+PRINT "Py coords from config:"
+Py$ = ""
+FOR i, 1, Py_count, 1
+    Py$ = Py$ + " " + $STR(Py(i))
+NEXT
+PRINT Py$
+PRINT
+PRINT "Saving a JSON file with lens data and aberration analysis data" 
+msg$ = "   to " + jsonFilePath$
 PRINT msg$
 
 OUTPUT jsonFilePath$
@@ -122,7 +166,6 @@ exitPupilPos = OPEV(id, 0,0,0,0,0,0)
 surfCount = NSUR()
 
 PRINT "# hjson format" 
-PRINT "# postfixes: T = tangential, S = saggittal, im = image, obj = object"
 
 str$ = "name: " + fName$
 PRINT str$
@@ -132,7 +175,6 @@ PRINT str$
 FORMAT 2 INT
 PRINT "wavelength_count: ", waveCount
 PRINT "primary_wavelength: ", primaryWave
-PRINT "# in micrometers"
 FORMAT 4.3
 wavelist$ = "wavelengths: ["
 FOR i, 1, waveCount, 1
@@ -287,8 +329,9 @@ PRINT "chief: ["
 FOR i, 1, fieldCount, 1
     FORMAT 3 INT
     PRINT "    { field_no: ", i
+    FORMAT 6.3
     PRINT "      Hx      : ", Hx(i)
-    PRINT "      Hy      : ", Hy(j)
+    PRINT "      Hy      : ", Hy(i)
     FORMAT 6.3 EXP 
     IF afocal_im_space
         id = OCOD("RANG")
@@ -340,16 +383,18 @@ PRINT "]"
 PRINT "tangential: ["
 FOR field, 1, fieldCount, 1
     FORMAT 3 INT
-    PRINT     "    { field_no: ", field
+    PRINT     "    { field_no   : ", field
     ! if Hy = 0, assume that tangential line is Py=0 (useful for anamorphic lenses etc)
     ! if Hx = 0 (usual case), find aberrations for varying Py
-    FORMAT 6.3 EXP
+    FORMAT 6.3
     IF FLDY(field) == 0
-        PRINT "      Hx      :", Hx(field)
+        PRINT "      Hx         : ", Hx(field)
         PRINT "      aberrations: ["
         IF afocal_im_space == 0
             FOR coord, 1, Px_count, 1
+                FORMAT 6.3
                 PRINT   "        { Px: ", Px(coord)
+                FORMAT 6.3 EXP
                 trax$ = "        TRAX: ["
                 id = OCOD("TRAX")
                 FOR wave, 1, waveCount, 1
@@ -366,7 +411,9 @@ FOR field, 1, fieldCount, 1
             NEXT 
         ELSE
             FOR coord, 1, Px_count, 1
+                FORMAT 6.3
                 PRINT   "        { Px: ", Px(coord)
+                FORMAT 6.3 EXP
                 anax$ = "        ANAX: ["
                 id = OCOD("ANAX")
                 FOR wave, 1, waveCount, 1
@@ -386,11 +433,14 @@ FOR field, 1, fieldCount, 1
         PRINT "    },"
     ELSE
         IF FLDX(field) == 0
-            PRINT "    Hy      :", Hx(field)
-            PRINT "    aberrations: ["
+            FORMAT 6.3
+            PRINT "      Hy         : ", Hy(field)
+            PRINT "      aberrations: ["
             IF afocal_im_space == 0
                 FOR coord, 1, Py_count, 1
-                    PRINT   "        { Py: ", Px(coord)
+                    FORMAT 6.3
+                    PRINT   "        { Py: ", Py(coord)
+                    FORMAT 6.3 EXP
                     tray$ = "        TRAY: ["
                     id = OCOD("TRAY")
                     FOR wave, 1, waveCount, 1
@@ -407,7 +457,9 @@ FOR field, 1, fieldCount, 1
                 NEXT 
             ELSE
                 FOR coord, 1, Py_count, 1
-                    PRINT   "        { Py: ", Px(coord)
+                    FORMAT 6.3
+                    PRINT   "        { Py: ", Py(coord)
+                    FORMAT 6.3 EXP
                     anay$ = "        ANAY: ["
                     id = OCOD("ANAY")
                     FOR wave, 1, waveCount, 1
@@ -441,6 +493,7 @@ FOR field, 1, fieldCount, 1
         PRINT "      aberrations: ["
         IF afocal_im_space == 0
             FOR coord, 1, Px_count, 1
+                FORMAT 6.3
                 PRINT   "        { Px: ", Px(coord)
                 FORMAT 6.3 EXP
                 trax$ = "        TRAX: ["
@@ -511,6 +564,7 @@ FOR field, 1, fieldCount, 1
             PRINT "    aberrations: ["
             IF afocal_im_space == 0
                 FOR coord, 1, Py_count, 1
+                    FORMAT 6.3
                     PRINT   "        { Py: ", Py(coord)
                     FORMAT 6.3 
                     trax$ = "        TRAX: ["
@@ -541,6 +595,7 @@ FOR field, 1, fieldCount, 1
                 NEXT 
             ELSE
                 FOR coord, 1, Py_count, 1
+                    FORMAT 6.3
                     PRINT   "        { Py: ", Py(coord)
                     FORMAT 6.3 EXP
                     anax$ = "        ANAX: ["
