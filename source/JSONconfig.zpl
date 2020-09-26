@@ -14,8 +14,8 @@ PRINT "# modify it to have aberration data calculated for the specific rays you 
 PRINT "# aberrations are calculated for every combination of Px/Py/Hx/Hy"
 PRINT "# use spaces as delimiters, use '# ' for comments"
 PRINT "# ASCII encoding"
-PRINT "Px_count: 1"
-PRINT "Px: 0"
+PRINT "Px_count: 3"
+PRINT "Px: 0 0.7 1"
 PRINT "Py_count: 4"
 PRINT "Py: 0 0.5 0.7 1"
 
