@@ -379,7 +379,7 @@ FOR i, 1, fieldCount, 1
     PRINT "    },"
 NEXT
 PRINT "]"
-
+PRINT
 PRINT "tangential: ["
 FOR field, 1, fieldCount, 1
     FORMAT 3 INT
@@ -481,7 +481,7 @@ FOR field, 1, fieldCount, 1
     ENDIF
 NEXT
 PRINT "]"
-
+PRINT
 PRINT "sagittal: ["
 FOR field, 1, fieldCount, 1
     FORMAT 3 INT
