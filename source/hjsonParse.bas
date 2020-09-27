@@ -349,6 +349,54 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
             Set fieldDict = New Scripting.Dictionary
             Set fieldDict = _
                 parseOneLevel(withoutOuterBrackets(fieldStr))
+            With fieldDict
+                Dim chiefDict As Scripting.Dictionary
+                Set chiefDict = New Scripting.Dictionary
+                Set chiefDict = parseOneLevel(withoutOuterBrackets(.Item("chief")))
+                With chiefDict
+                    .Item("REAX") = delEmptyLines(parseArray(.Item("REAX")))
+                    .Item("REAY") = delEmptyLines(parseArray(.Item("REAY")))
+                End With
+                Set .Item("chief") = chiefDict
+                
+                Dim tangDicts As Collection
+                Set tangDicts = New Collection
+                Dim tangArr() As String
+                tangArr = delEmptyLines(parseArray(.Item("tangential")))
+                Dim tangObjUnparsed As Variant
+                For Each tangObjUnparsed In tangArr
+                    Dim tangDict As Scripting.Dictionary
+                    Set tangDict = New Scripting.Dictionary
+                    Set tangDict = parseOneLevel(withoutOuterBrackets(tangObjUnparsed))
+                    With tangDict
+                        .Item("TRAX") = delEmptyLines(parseArray(.Item("TRAX")))
+                        .Item("TRAY") = delEmptyLines(parseArray(.Item("TRAY")))
+                        .Item("ANAX") = delEmptyLines(parseArray(.Item("ANAX")))
+                        .Item("ANAY") = delEmptyLines(parseArray(.Item("ANAY")))
+                    End With
+                    tangDicts.Add tangDict
+                Next tangObjUnparsed
+                Set .Item("tangential") = tangDicts
+                
+                Dim sagDicts As Collection
+                Set sagDicts = New Collection
+                Dim sagArr() As String
+                sagArr = delEmptyLines(parseArray(.Item("sagittal")))
+                Dim sagObjUnparsed As Variant
+                For Each sagObjUnparsed In sagArr
+                    Dim sagDict As Scripting.Dictionary
+                    Set sagDict = New Scripting.Dictionary
+                    Set sagDict = parseOneLevel(withoutOuterBrackets(sagObjUnparsed))
+                    With sagDict
+                        .Item("TRAX") = delEmptyLines(parseArray(.Item("TRAX")))
+                        .Item("TRAY") = delEmptyLines(parseArray(.Item("TRAY")))
+                        .Item("ANAX") = delEmptyLines(parseArray(.Item("ANAX")))
+                        .Item("ANAY") = delEmptyLines(parseArray(.Item("ANAY")))
+                    End With
+                    sagDicts.Add sagDict
+                Next sagObjUnparsed
+                Set .Item("sagittal") = sagDicts
+            End With
             fieldDicts.Add fieldDict
         Next fieldStr
         Set .Item("fields") = fieldDicts
@@ -390,88 +438,9 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         Next axialObjUnparsed
         Set .Item("axial") = axialDicts
         
-        Dim chiefDicts As Collection
-        Set chiefDicts = New Collection
-        Dim chiefArr() As String
-        chiefArr = delEmptyLines(parseArray(.Item("chief")))
-        Dim chiefObjUnparsed As Variant
-        For Each chiefObjUnparsed In axialArr
-            Dim chiefDict As Scripting.Dictionary
-            Set chiefDict = New Scripting.Dictionary
-            Set chiefDict = parseOneLevel(withoutOuterBrackets(chiefObjUnparsed))
-            With chiefDict
-                .Item("REAX") = delEmptyLines(parseArray(.Item("REAX")))
-                .Item("REAY") = delEmptyLines(parseArray(.Item("REAY")))
-            End With
-            chiefDicts.Add chiefDict
-        Next chiefObjUnparsed
-        Set .Item("chief") = chiefDicts
-        
         Dim maxAberDict As Scripting.Dictionary
         Set maxAberDict = New Scripting.Dictionary
-        Set .Item("maximum") = parseOneLevel(withoutOuterBrackets(.Item("maximum")))
-        
-        Dim tangDicts As Collection
-        Set tangDicts = New Collection
-        Dim tangArr() As String
-        tangArr = delEmptyLines(parseArray(.Item("tangential")))
-        Dim tangObjUnparsed As Variant
-        For Each tangObjUnparsed In tangArr
-            Dim tangDict As Scripting.Dictionary
-            Set tangDict = New Scripting.Dictionary
-            Set tangDict = parseOneLevel(withoutOuterBrackets(tangObjUnparsed))
-            With tangDict
-                Dim aberArr() As String
-                Dim aberDicts As Collection
-                Set aberDicts = New Collection
-                aberArr = delEmptyLines(parseArray(.Item("aberrations")))
-                Dim aberObjUnparsed As Variant
-                For Each aberObjUnparsed In aberArr
-                    Dim aberDict As Scripting.Dictionary
-                    Set aberDict = New Scripting.Dictionary
-                    Set aberDict = parseOneLevel(withoutOuterBrackets(aberObjUnparsed))
-                    With aberDict
-                        .Item("TRAX") = delEmptyLines(parseArray(.Item("TRAX")))
-                        .Item("TRAY") = delEmptyLines(parseArray(.Item("TRAY")))
-                        .Item("ANAX") = delEmptyLines(parseArray(.Item("ANAX")))
-                        .Item("ANAY") = delEmptyLines(parseArray(.Item("ANAY")))
-                    End With
-                    aberDicts.Add aberDict
-                Next aberObjUnparsed
-                Set .Item("aberrations") = aberDicts
-            End With
-            tangDicts.Add tangDict
-        Next tangObjUnparsed
-        Set .Item("tangential") = tangDicts
-        
-        Dim sagDicts As Collection
-        Set sagDicts = New Collection
-        Dim sagArr() As String
-        sagArr = delEmptyLines(parseArray(.Item("sagittal")))
-        Dim sagObjUnparsed As Variant
-        For Each sagObjUnparsed In sagArr
-            Dim sagDict As Scripting.Dictionary
-            Set sagDict = New Scripting.Dictionary
-            Set sagDict = parseOneLevel(withoutOuterBrackets(sagObjUnparsed))
-            With sagDict
-                Set aberDicts = New Collection
-                aberArr = delEmptyLines(parseArray(.Item("aberrations")))
-                For Each aberObjUnparsed In aberArr
-                    Set aberDict = New Scripting.Dictionary
-                    Set aberDict = parseOneLevel(withoutOuterBrackets(aberObjUnparsed))
-                    With aberDict
-                        .Item("TRAX") = delEmptyLines(parseArray(.Item("TRAX")))
-                        .Item("TRAY") = delEmptyLines(parseArray(.Item("TRAY")))
-                        .Item("ANAX") = delEmptyLines(parseArray(.Item("ANAX")))
-                        .Item("ANAY") = delEmptyLines(parseArray(.Item("ANAY")))
-                    End With
-                    aberDicts.Add aberDict
-                Next aberObjUnparsed
-                Set .Item("aberrations") = aberDicts
-            End With
-            sagDicts.Add sagDict
-        Next sagObjUnparsed
-        Set .Item("sagittal") = sagDicts
+        'Set .Item("maximum") = parseOneLevel(withoutOuterBrackets(.Item("maximum"))
         
     End With
     Set jsonToDict = outputDict
@@ -489,26 +458,7 @@ Function delEmptyLines(strArr() As String) As String()
     Next i
     delEmptyLines = outArr
 End Function
-Public Sub printInfo(ByVal info As String)
-    With jsonForm.outputTB
-        .text = .text & vbCrLf & info
-    End With
-End Sub
-Public Sub printStatus(ByVal info As String)
-    With jsonForm.status
-        .Caption = .text & vbCrLf & info
-    End With
-End Sub
-Public Sub rinseInfo()
-    With jsonForm.outputTB
-        .text = ""
-    End With
-End Sub
-Public Sub rinseStatus()
-    With jsonForm.status
-        .Caption = ""
-    End With
-End Sub
+
 Private Function withoutOuterBrackets(ByVal str As String) As String
     'remove outer {}:
     Dim firstChar As String
@@ -529,54 +479,7 @@ Private Function withoutOuterBrackets(ByVal str As String) As String
     withoutOuterBrackets = str
 End Function
 
-Public Sub displayDict(dict As Scripting.Dictionary)
-    'prints out dictionary contents in a window
-    
-    Dim Txt As String
-    Dim i As Integer
-    
-    With dict
-        printInfo ("Имя системы: " & dict.Item("name"))
-        printInfo ("Число заданных длин волн: " & .Item("wavelength_count"))
-        printInfo ("Основная длина волны: " & .Item("primary_wavelength"))
-        printInfo ("Тип задания поля: " & .Item("field_type"))
-        printInfo ("Число заданных величин поля: " & .Item("field_count"))
-        'Txt = Txt & "Полное поле: " & .Item("max_field") & vbCrLf
-        'Txt = Txt & "Невиньетированное поле: " & .Item("unvignetted_field") & vbCrLf
-        printInfo ("Число поверхностей: " & .Item("surface_count"))
-        printInfo ("Число заданных длин волн: " & .Item("wavelength_count"))
-        
-        printInfo ("Длины волн:")
-        For i = 0 To Val(.Item("wavelength_count")) - 1
-            printInfo (.Item("wavelengths")(i) & ", ")
-        Next i
-        printInfo ("")
-        printInfo ("Апертурные характеристики:")
-        With .Item("aperture_data")
-            printInfo ("  Тип апертуры: " & .Item("type"))
-            printInfo ("  Величина апертуры: " & .Item("value"))
-            printInfo ("  Диаметр входного зрачка: " & .Item("D_im"))
-            printInfo ("  Диаметр выходного зрачка: " & .Item("D_obj"))
-            printInfo ("  Положение входного зрачка: " & .Item("ENPP") & " от первой поверхности")
-            printInfo ("  Положение выходного зрачка: " & .Item("EXPP") & " от плоскости изображения")
-        End With
-        printInfo ("")
-        
-        printInfo ("Поверхности:")
-        Dim surf As Scripting.Dictionary
-        Dim radius, curvature, thickness As Double
-        For Each surf In .Item("surfaces")
-            curvature = Val(surf.Item("curvature"))
-            If curvature = 0 Then
-                radius = 0
-            Else
-                radius = 1 / curvature
-            End If
-            thickness = Val(surf.Item("thickness"))
-            printInfo (surf.Item("no") & "  " & radius & "  " & thickness & surf.Item("glass"))
-        Next surf
-    End With
-    
-End Sub
+
+
 
 

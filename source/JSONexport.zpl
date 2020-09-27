@@ -186,39 +186,6 @@ NEXT
 wavelist$ = wavelist$ + "]"
 PRINT wavelist$
 PRINT
-
-FORMAT 3 INT
-PRINT "field_type: ", fieldTypeID
-PRINT "# field types: "
-PRINT "# 0 - degrees object space"
-PRINT "# 1 - object heigth in lens units"
-PRINT "# 2 - paraxial image height in lens units"
-PRINT "# 3 - real image heigth in lens units"
-PRINT "field_count: ", fieldCount
-PRINT "# full half-field angle or height"
-FORMAT 6.3
-str$ = "max_field: " + $STR(maxField)
-PRINT str$
-SETVIG 
-PRINT "fields: ["
-FOR i, 1, fieldCount, 1
-    Hx(i) = FLDX(i)/maxField
-    Hy(i) = FLDY(i)/maxField
-    PRINT "  {"
-    FORMAT 2 INT
-    PRINT "    no: ", i
-    FORMAT 9.6
-    PRINT "    x_field                : ", FLDX(i)
-    PRINT "    y_field                : ", FLDY(i)
-    PRINT "    vignetting_angle       : ", FVAN(i)
-    PRINT "    vignetting_compession_x: ", FVCX(i)
-    PRINT "    vignetting_compession_y: ", FVCY(i)
-    PRINT "    vignetting_decenter_x  : ", FVDX(i)
-    PRINT "    vignetting_decenter_y  : ", FVDY(i)
-    PRINT "  },"
-NEXT
-PRINT "]"
-PRINT
 PRINT "aperture_data: {"
 FORMAT 6.3
 PRINT "  type : ", apertureType
@@ -233,7 +200,6 @@ PRINT "}"
 PRINT
 FORMAT 3 INT
 PRINT "surface_count: ", surfCount
-
 PRINT "# index is 0 for air in Zemax"
 PRINT "surfaces: ["
 FOR i, 1, surfCount, 1
@@ -266,7 +232,6 @@ id = OCOD("DIMX")
 PRINT "    DIMX_percent: ", OPEV(id, 0, primaryWave, 0, 0, 0,0)
 PRINT "}"
 PRINT
-
 PRINT "axial: ["
 FOR i, 1, Px_count, 1
     FOR j, 1, Py_count, 1
@@ -324,14 +289,37 @@ FOR i, 1, Px_count, 1
 NEXT
 PRINT "]"
 PRINT
-
-PRINT "chief: ["
-FOR i, 1, fieldCount, 1
-    FORMAT 3 INT
-    PRINT "    { field_no: ", i
+FORMAT 3 INT
+PRINT "field_type: ", fieldTypeID
+PRINT "# field types: "
+PRINT "# 0 - degrees object space"
+PRINT "# 1 - object heigth in lens units"
+PRINT "# 2 - paraxial image height in lens units"
+PRINT "# 3 - real image heigth in lens units"
+PRINT "field_count: ", fieldCount
+PRINT "# full half-field angle or height"
+FORMAT 6.3
+str$ = "max_field: " + $STR(maxField)
+PRINT str$
+SETVIG 
+PRINT "fields: ["
+FOR field, 1, fieldCount, 1
+    Hx(field) = FLDX(field)/maxField
+    Hy(field) = FLDY(field)/maxField
+    PRINT "  {"
+    FORMAT 2 INT
+    PRINT "    no                     : ", field
     FORMAT 6.3
-    PRINT "      Hx      : ", Hx(i)
-    PRINT "      Hy      : ", Hy(i)
+    PRINT "    Hx                     :", Hx(field)
+    PRINT "    Hy                     :", Hy(field)
+    PRINT "    x_field                : ", FLDX(field)
+    PRINT "    y_field                : ", FLDY(field)
+    PRINT "    vignetting_angle       : ", FVAN(field)
+    PRINT "    vignetting_compession_x: ", FVCX(field)
+    PRINT "    vignetting_compession_y: ", FVCY(field)
+    PRINT "    vignetting_decenter_x  : ", FVDX(field)
+    PRINT "    vignetting_decenter_y  : ", FVDY(field)
+    PRINT "    chief: {"
     FORMAT 6.3 EXP 
     IF afocal_im_space
         id = OCOD("RANG")
@@ -341,7 +329,7 @@ FOR i, 1, fieldCount, 1
                 rang$ = rang$ + ", "
             ENDIF
             ! RANG(surface, wave, Hx, Hy, Px, Py)
-            opval = OPEV(id, surfCount, wave, Hx(i), Hy(i), 0, 0)
+            opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
             rang$ = rang$ + $STR(opval) 
         NEXT
         rang$ = rang$ + "]"
@@ -354,7 +342,7 @@ FOR i, 1, fieldCount, 1
                 reax$ = reax$ + ", "
             ENDIF
             ! REAX(surface, wave, Hx, Hy, Px, Py)
-            opval = OPEV(id, surfCount, wave, Hx(i), Hy(i), 0, 0)
+            opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
             reax$ = reax$ + $STR(opval) 
         NEXT
         reax$ = reax$ + "]"
@@ -366,7 +354,7 @@ FOR i, 1, fieldCount, 1
                 reay$ = reay$ + ", "
             ENDIF
             ! REAY(surface, wave, Hx, Hy, Px, Py)
-            opval = OPEV(id, surfCount, wave, Hx(i), Hy(i), 0, 0)
+            opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
             reay$ = reay$ + $STR(opval) 
         NEXT
         reay$ = reay$ + "]"
@@ -374,22 +362,13 @@ FOR i, 1, fieldCount, 1
     ENDIF
     id = OCOD("DISG")
     ! DISG(field, wave, Hx, Hy, Px, Py)
-    str$ = "      DISG: " + $STR(OPEV(id, maxField, primaryWave, Hx(i), Hy(i), 0, 0)) + " #in %"
+    str$ = "      DISG: " + $STR(OPEV(id, maxField, primaryWave, Hx(field), Hy(field), 0, 0)) + " #in %"
     PRINT str$
     PRINT "    },"
-NEXT
-PRINT "]"
-PRINT
-PRINT "tangential: ["
-FOR field, 1, fieldCount, 1
-    FORMAT 3 INT
-    PRINT     "    { field_no   : ", field
+    PRINT "    tangential: ["
     ! if Hy = 0, assume that tangential line is Py=0 (useful for anamorphic lenses etc)
     ! if Hx = 0 (usual case), find aberrations for varying Py
-    FORMAT 6.3
     IF FLDY(field) == 0
-        PRINT "      Hx         : ", Hx(field)
-        PRINT "      aberrations: ["
         IF afocal_im_space == 0
             FOR coord, 1, Px_count, 1
                 FORMAT 6.3
@@ -429,13 +408,9 @@ FOR field, 1, fieldCount, 1
                 PRINT "        },"
             NEXT           
         ENDIF
-        PRINT "      ]"
-        PRINT "    },"
     ELSE
         IF FLDX(field) == 0
             FORMAT 6.3
-            PRINT "      Hy         : ", Hy(field)
-            PRINT "      aberrations: ["
             IF afocal_im_space == 0
                 FOR coord, 1, Py_count, 1
                     FORMAT 6.3
@@ -475,22 +450,13 @@ FOR field, 1, fieldCount, 1
                     PRINT "        },"
                 NEXT
             ENDIF
-            PRINT "      ]"
-            PRINT "    },"
         ENDIF
     ENDIF
-NEXT
-PRINT "]"
-PRINT
-PRINT "sagittal: ["
-FOR field, 1, fieldCount, 1
-    FORMAT 3 INT
-    PRINT     "    { field_no   : ", field
+    PRINT "    ]"
+    PRINT "    sagittal: ["
     IF FLDX(field) == 0
     ! then X coord is sagittal
         FORMAT 6.3 
-        PRINT "      Hy         :", Hy(field)
-        PRINT "      aberrations: ["
         IF afocal_im_space == 0
             FOR coord, 1, Px_count, 1
                 FORMAT 6.3
@@ -554,8 +520,6 @@ FOR field, 1, fieldCount, 1
                 PRINT "        },"
             NEXT           
         ENDIF
-        PRINT "      ]"
-        PRINT "    },"
     ELSE
         IF FLDY(field) == 0
         ! then Y coord is sagittal
@@ -625,9 +589,9 @@ FOR field, 1, fieldCount, 1
                     PRINT "        },"
                 NEXT
             ENDIF
-            PRINT "      ]"
-            PRINT "    },"
         ENDIF
     ENDIF
+    PRINT "    ]"
+PRINT "  },"
 NEXT
 PRINT "]"
