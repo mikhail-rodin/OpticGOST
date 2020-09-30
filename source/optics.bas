@@ -1,7 +1,7 @@
 Attribute VB_Name = "optics"
 Option Base 0
 Option Explicit
-Function SpectralLine(wavelength_nm As Double) As String
+Public Function SpectralLine(wavelength_nm As Double) As String
 ' returns a Fraunhofer line letter (e.g. e', F, G etc)
 ' for a wavelength in nanometers
     Select Case wavelength_nm
@@ -19,13 +19,13 @@ Function SpectralLine(wavelength_nm As Double) As String
         SpectralLine = "D"
     Case 579.6 To 599.6
         SpectralLine = "D1"
-    Case 579# To 599#
+    Case 579 To 599
         SpectralLine = "D2"
     Case 577.6 To 597.6
         SpectralLine = "D3"
     Case 536.1 To 556.1
         SpectralLine = "e"
-    Case 517# To 537#
+    Case 517 To 537
         SpectralLine = "E2"
     Case 508.4 To 528.4
         SpectralLine = "b1"
@@ -43,7 +43,7 @@ Function SpectralLine(wavelength_nm As Double) As String
         SpectralLine = "d"
     Case 428.4 To 448.4
         SpectralLine = "e'"
-    Case 424# To 444#
+    Case 424 To 444
         SpectralLine = "G'"
     Case 420.8 To 440.8
         SpectralLine = "G"
@@ -55,7 +55,7 @@ Function SpectralLine(wavelength_nm As Double) As String
         SpectralLine = "H"
     Case 383.4 To 403.4
         SpectralLine = "K"
-    Case 372# To 392#
+    Case 372 To 392
         SpectralLine = "L"
     Case 348.1 To 368.1
         SpectralLine = "N"

@@ -329,15 +329,7 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         surface_count = Int(.Item("surface_count"))
         Py_coord_count = Int(.Item("Py_coord_count"))
         
-        Dim allWavesStr() As String
-        Dim allWaves() As Double
-        allWavesStr = delEmptyLines(parseArray(.Item("wavelengths")))
-        ReDim allWaves(wavelength_count - 1)
-        For i = 0 To (wavelength_count - 1)
-            allWaves(i) = Val(allWavesStr(i))
-        Next i
-        .Item("wavelengths") = allWaves
-        'wavelenght array added
+        .Item("wavelengths") = CDblArr(delEmptyLines(parseArray(.Item("wavelengths"))))
         
         Dim fieldDict As Scripting.Dictionary
         Dim fieldDicts As Collection
@@ -354,8 +346,8 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
                 Set chiefDict = New Scripting.Dictionary
                 Set chiefDict = parseOneLevel(withoutOuterBrackets(.Item("chief")))
                 With chiefDict
-                    .Item("REAX") = delEmptyLines(parseArray(.Item("REAX")))
-                    .Item("REAY") = delEmptyLines(parseArray(.Item("REAY")))
+                    .Item("REAX") = CDblArr(delEmptyLines(parseArray(.Item("REAX"))))
+                    .Item("REAY") = CDblArr(delEmptyLines(parseArray(.Item("REAY"))))
                 End With
                 Set .Item("chief") = chiefDict
                 
@@ -369,10 +361,12 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
                     Set tangDict = New Scripting.Dictionary
                     Set tangDict = parseOneLevel(withoutOuterBrackets(tangObjUnparsed))
                     With tangDict
-                        .Item("TRAX") = delEmptyLines(parseArray(.Item("TRAX")))
-                        .Item("TRAY") = delEmptyLines(parseArray(.Item("TRAY")))
-                        .Item("ANAX") = delEmptyLines(parseArray(.Item("ANAX")))
-                        .Item("ANAY") = delEmptyLines(parseArray(.Item("ANAY")))
+                        .Item("Px") = Val(.Item("Px"))
+                        .Item("Py") = Val(.Item("Py"))
+                        .Item("TRAX") = CDblArr(delEmptyLines(parseArray(.Item("TRAX"))))
+                        .Item("TRAY") = CDblArr(delEmptyLines(parseArray(.Item("TRAY"))))
+                        .Item("ANAX") = CDblArr(delEmptyLines(parseArray(.Item("ANAX"))))
+                        .Item("ANAY") = CDblArr(delEmptyLines(parseArray(.Item("ANAY"))))
                     End With
                     tangDicts.Add tangDict
                 Next tangObjUnparsed
@@ -388,14 +382,26 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
                     Set sagDict = New Scripting.Dictionary
                     Set sagDict = parseOneLevel(withoutOuterBrackets(sagObjUnparsed))
                     With sagDict
-                        .Item("TRAX") = delEmptyLines(parseArray(.Item("TRAX")))
-                        .Item("TRAY") = delEmptyLines(parseArray(.Item("TRAY")))
-                        .Item("ANAX") = delEmptyLines(parseArray(.Item("ANAX")))
-                        .Item("ANAY") = delEmptyLines(parseArray(.Item("ANAY")))
+                        .Item("Px") = Val(.Item("Px"))
+                        .Item("Py") = Val(.Item("Py"))
+                        .Item("TRAX") = CDblArr(delEmptyLines(parseArray(.Item("TRAX"))))
+                        .Item("TRAY") = CDblArr(delEmptyLines(parseArray(.Item("TRAY"))))
+                        .Item("ANAX") = CDblArr(delEmptyLines(parseArray(.Item("ANAX"))))
+                        .Item("ANAY") = CDblArr(delEmptyLines(parseArray(.Item("ANAY"))))
                     End With
                     sagDicts.Add sagDict
                 Next sagObjUnparsed
                 Set .Item("sagittal") = sagDicts
+                .Item("no") = Int(.Item("no"))
+                .Item("Hx") = Val(.Item("Hx"))
+                .Item("Hy") = Val(.Item("Hy"))
+                .Item("x_field") = Val(.Item("x_field"))
+                .Item("y_field") = Val(.Item("y_field"))
+                .Item("vignetting_angle") = Val(.Item("vignetting_angle"))
+                .Item("vignetting_compession_x") = Val(.Item("vignetting_compession_x"))
+                .Item("vignetting_compession_x") = Val(.Item("vignetting_compession_x"))
+                .Item("vignetting_decenter_x") = Val(.Item("vignetting_decenter_x"))
+                .Item("vignetting_decenter_y") = Val(.Item("vignetting_decenter_y"))
             End With
             fieldDicts.Add fieldDict
         Next fieldStr
@@ -430,9 +436,12 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
             Set axialDict = New Scripting.Dictionary
             Set axialDict = parseOneLevel(withoutOuterBrackets(axialObjUnparsed))
             With axialDict
-                .Item("TRAX") = delEmptyLines(parseArray(.Item("TRAX")))
-                .Item("TRAY") = delEmptyLines(parseArray(.Item("TRAY")))
-                .Item("LONA") = delEmptyLines(parseArray(.Item("LONA")))
+                .Item("Px") = Val(.Item("Px"))
+                .Item("Py") = Val(.Item("Py"))
+                .Item("OSCD") = Val(.Item("OSCD"))
+                .Item("TRAX") = CDblArr(delEmptyLines(parseArray(.Item("TRAX"))))
+                .Item("TRAY") = CDblArr(delEmptyLines(parseArray(.Item("TRAY"))))
+                .Item("LONA") = CDblArr(delEmptyLines(parseArray(.Item("LONA"))))
             End With
             axialDicts.Add axialDict
         Next axialObjUnparsed
@@ -440,13 +449,15 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         
         Dim maxAberDict As Scripting.Dictionary
         Set maxAberDict = New Scripting.Dictionary
-        'Set .Item("maximum") = parseOneLevel(withoutOuterBrackets(.Item("maximum"))
+        '.Item("maximum") = parseOneLevel(withoutOuterBrackets(.Item("maximum"))
         
     End With
     Set jsonToDict = outputDict
 End Function
-Function delEmptyLines(strArr() As String) As String()
+Private Function delEmptyLines(strArr() As String) As String()
     Dim outArr() As String
+    ReDim outArr(0)
+    outArr(0) = "" 'so that we never return an uninitialized array
     Dim i As Integer
     For i = 0 To UBound(strArr)
         If Replace(strArr(i), " ", "") <> "" Then
@@ -479,7 +490,12 @@ Private Function withoutOuterBrackets(ByVal str As String) As String
     withoutOuterBrackets = str
 End Function
 
-
-
-
-
+Public Function CDblArr(ByRef strArr() As String) As Double()
+    Dim res() As Double
+    ReDim res(UBound(strArr))
+    Dim i As Integer
+    For i = 0 To UBound(strArr)
+        res(i) = Val(strArr(i))
+    Next i
+    CDblArr = res
+End Function
