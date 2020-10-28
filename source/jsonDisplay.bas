@@ -70,31 +70,116 @@ Public Sub displayDict(dict As Scripting.Dictionary)
     End With
     
 End Sub
-
-Public Sub dispWaves(ByRef lens As Scripting.Dictionary)
-    Dim waveArr() As Double
-    waveArr = lens.Item("wavelengths")
+Public Sub addWaves(ByRef lens As CLens)
     Dim i As Integer
-    For i = 0 To UBound(waveArr)
-        With jsonForm.waveList
-            .AddItem
-            .List(i, 0) = CStr(i)
-            .List(i, 1) = CStr(1000 * waveArr(i)) + " םל"
-            .List(i, 2) = optics.SpectralLine(1000 * waveArr(i))
-        End With
-    Next i
-    
-    Dim primaryWave As Integer
-    primaryWave = lens.Item("primary_wavelength") - 1 'Zemax is 1-based
-    With jsonForm.waveSel
-        .Clear
-        .AddItem
-        .List(0, 0) = CStr(primaryWave)
-        .List(0, 1) = CStr(1000 * waveArr(primaryWave)) + " םל"
-        .List(0, 2) = optics.SpectralLine(1000 * waveArr(primaryWave))
+    With jsonForm.waveList
+        For i = 0 To .ListCount - 1
+            If .Selected(i) Then
+                Call lens.addWave(i + 1)
+            End If
+        Next i
     End With
 End Sub
-Public Sub dispFields(ByRef lens As Scripting.Dictionary)
+Public Sub addFields(ByRef lens As CLens)
+    Dim i As Integer
+    With jsonForm.fieldList
+        For i = 0 To .ListCount - 1
+            If .Selected(i) Then
+                Call lens.addField(i + 1)
+            End If
+        Next i
+    End With
+End Sub
+Public Sub refreshWaves(lens As CLens)
+    Dim i As Integer
+    With jsonForm.waveList
+        .Clear
+        For i = 0 To lens.waveCount - 1
+            .AddItem
+            .List(i, 0) = CStr(i + 1)
+            .List(i, 1) = CStr(1000 * lens.wavelength(i + 1)) + " םל"
+            .List(i, 2) = optics.SpectralLine(1000 * lens.wavelength(i + 1))
+        Next i
+    End With
+    
+    Dim selection() As Integer
+    selection = lens.selectedWaves
+    With jsonForm.waveSel
+        .Clear
+        If UBound(selection) > 0 Then
+        'if something's selected
+            For i = 0 To UBound(selection) - 1
+                .AddItem
+                .List(i, 0) = CStr(selection(i + 1))
+                .List(i, 1) = CStr(1000 * lens.wavelength(selection(i + 1))) + " םל"
+                .List(i, 2) = optics.SpectralLine(1000 * lens.wavelength(selection(i + 1)))
+            Next i
+        End If
+    End With
+End Sub
+Public Sub delWaves(lens As CLens)
+    Dim i As Integer
+    Dim waveNo As Integer
+    With jsonForm.waveSel
+        For i = 0 To .ListCount - 1
+            If .Selected(i) Then
+                waveNo = Int(.List(i, 0))
+                Call lens.delWave(waveNo)
+            End If
+        Next i
+    End With
+End Sub
+Public Sub delFields(lens As CLens)
+    Dim i As Integer
+    Dim fieldNo As Integer
+    With jsonForm.fieldSel
+        For i = 0 To .ListCount - 1
+            If .Selected(i) Then
+                fieldNo = Int(.List(i, 0))
+                Call lens.delField(fieldNo)
+            End If
+        Next i
+    End With
+End Sub
+Public Sub refreshFields(lens As CLens)
+    Dim postfix As String
+    If lens.field_type = 0 Then
+        postfix = ChrW(176) 'degrees dot
+    Else
+        postfix = " " + lens.units
+    End If
+    
+    Dim i As Integer
+    With jsonForm.fieldList
+        .Clear
+        For i = 0 To lens.fieldCount - 1
+            .AddItem
+            .List(i, 0) = CStr(i + 1)
+            .List(i, 1) = CStr(Round(lens.Hy(i + 1), 2))
+            .List(i, 2) = CStr(Round(lens.Hx(i + 1), 2))
+            .List(i, 3) = CStr(Round(lens.yField(i + 1), 2)) + postfix
+            .List(i, 4) = CStr(Round(lens.xField(i + 1), 2)) + postfix
+        Next i
+    End With
+    
+    Dim selection() As Integer
+    selection = lens.selectedFields
+    With jsonForm.fieldSel
+        .Clear
+        If UBound(selection) > 0 Then
+        'if something's selected
+            For i = 0 To UBound(selection) - 1
+                .AddItem
+                .List(i, 0) = CStr(selection(i + 1))
+                .List(i, 1) = CStr(Round(lens.Hy(selection(i + 1)), 2))
+                .List(i, 2) = CStr(Round(lens.Hx(selection(i + 1)), 2))
+                .List(i, 3) = CStr(Round(lens.yField(selection(i + 1)), 2)) + postfix
+                .List(i, 4) = CStr(Round(lens.xField(selection(i + 1)), 2)) + postfix
+            Next i
+        End If
+    End With
+End Sub
+Public Sub dispFields(ByRef lens As CLens)
     Dim fieldType As Integer
     Dim lensUnits, postfix As String
     fieldType = lens.Item("field_type")
@@ -120,7 +205,7 @@ Public Sub dispFields(ByRef lens As Scripting.Dictionary)
     Next field
 End Sub
 
-Public Sub fillAberTable(ByRef lens As Scripting.Dictionary, sheetName As String)
+Public Sub fillAberTable(ByRef lens As CLens, sheetName As String)
     Dim afocal, anamorphic, OPD As Boolean
     
     Dim primaryWave As Integer
@@ -167,3 +252,4 @@ Public Sub delListboxItem(ByRef listBox As MSForms.listBox)
         Wend
     End With
 End Sub
+

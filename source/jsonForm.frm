@@ -16,27 +16,22 @@ Attribute VB_Exposed = False
 '@Folder("OpticGOST")
 
 Private Sub fieldAdd_Click()
-    With jsonForm
-        Call jsonDisplay.copyListboxItem(.fieldList, .fieldSel)
-    End With
+    Call jsonDisplay.addFields(CLens)
+    Call jsonDisplay.refreshFields(CLens)
 End Sub
 
 Private Sub fieldDel_Click()
-    Call jsonDisplay.delListboxItem(Me.fieldSel)
-End Sub
-
-Private Sub fieldList_Click()
-
+    Call jsonDisplay.delFields(CLens)
+    Call jsonDisplay.refreshFields(CLens)
 End Sub
 
 Private Sub importBtn_Click()
-    Dim filePath, json As String
-    Dim lens As Scripting.Dictionary
-    Set lens = New Scripting.Dictionary
+    Dim filePath As String
+    Dim json As String
     'filePath = jsonForm.pathBox.text
     filePath = "C:\Users\Rodin\Documents\optics\TV-wide70deg\retrofocus_v6\retrofocus_v6mod1_lensdata.json"
     json = hjsonParse.readTextToString(filePath)
-    Set lens = hjsonParse.jsonToDict(json)
+    Call CLens.parse(json)
     With jsonForm
         .fieldFrm.Enabled = True
         .fieldAdd.Enabled = True
@@ -46,13 +41,10 @@ Private Sub importBtn_Click()
         .waveDel.Enabled = True
         .generateTablesBtn.Enabled = True
     End With
-    Call jsonDisplay.dispWaves(lens)
-    Call jsonDisplay.dispFields(lens)
+    Call jsonDisplay.refreshWaves(CLens)
+    Call jsonDisplay.refreshFields(CLens)
 End Sub
 
-Private Sub Label1_Click()
-
-End Sub
 
 Private Sub openFileBtn_Click()
     Dim dialog As Office.FileDialog
@@ -80,6 +72,7 @@ End Sub
 
 
 Private Sub UserForm_Initialize()
+
     With jsonForm
         .fieldFrm.Enabled = False
         .fieldAdd.Enabled = False
@@ -97,11 +90,11 @@ Private Sub UserForm_Initialize()
 End Sub
 
 Private Sub waveAdd_Click()
-    With jsonForm
-        Call jsonDisplay.copyListboxItem(.waveList, .waveSel)
-    End With
+    Call jsonDisplay.addWaves(CLens)
+    Call jsonDisplay.refreshWaves(CLens)
 End Sub
 
 Private Sub waveDel_Click()
-    Call jsonDisplay.delListboxItem(Me.waveSel)
+    Call jsonDisplay.delWaves(CLens)
+    Call jsonDisplay.refreshWaves(CLens)
 End Sub
