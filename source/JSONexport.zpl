@@ -19,7 +19,7 @@
 
 PRINT 
 PRINT "+---------------------------------------------+"
-PRINT "|            OpticGOST v1.2.1                 |"
+PRINT "|            OpticGOST v1.3.0                 |"
 PRINT "| https://github.com/mikhail-rodin/OpticGOST  |"
 PRINT "+---------------------------------------------+"
 PRINT "|          JSON lens data export              |"
@@ -50,6 +50,46 @@ Py(4) = 1
 Px(1) = 0
 Px_count = 1
 Py_count = 4
+
+! these are coords used to compute raytrace data
+DECLARE raytrace_Hx, double, 1, 50
+DECLARE raytrace_Hy, double, 1, 50
+DECLARE raytrace_Px, double, 1, 50
+DECLARE raytrace_Py, double, 1, 50
+! these are fixed and not to be edited
+! 1 - axial_y
+raytrace_Px(1) = 0
+raytrace_Py(1) = 1
+raytrace_Hx(1) = 0
+raytrace_Hy(1) = 0
+! 2 - chief_y
+raytrace_Px(2) = 0
+raytrace_Py(2) = 0
+raytrace_Hx(2) = 0
+raytrace_Hy(2) = 1
+! 3 - upper_y
+raytrace_Px(2) = 0
+raytrace_Py(2) = 1
+raytrace_Hx(2) = 0
+raytrace_Hy(2) = 1
+! 4 - lower_y
+raytrace_Px(2) = 0
+raytrace_Py(2) = -1
+raytrace_Hx(2) = 0
+raytrace_Hy(2) = 1
+
+! array of indices of coord sets for which raytrace data is calculated
+DECLARE raytraceSelection, integer, 1, 8
+! default selection - not to be changed
+raytraceSelection(1) = 1
+raytraceSelection(2) = 2
+raytraceSelection(3) = 3
+raytraceSelection(4) = 4
+selectedRayCount = 4
+! coord sets with index 5 and further are set in config file
+
+! TODO: read raytrace coords from config
+
 ! TODO: fallback to defaults in case config can't be read
 configFilePath$ = zmxPath$ + "\" + fName$ + "_config.txt"
 OPEN configFilePath$
@@ -102,13 +142,13 @@ LABEL 20
 CLOSE 
 
 FORMAT 6.3
-PRINT "Px coords from config:"
+PRINT "Px (sagittal) coords from config:"
 Px$ = ""
 FOR i, 1, Px_count, 1
     Px$ = Px$ + " " + $STR(Px(i))
 NEXT
 PRINT Px$
-PRINT "Py coords from config:"
+PRINT "Py (tangential) coords from config:"
 Py$ = ""
 FOR i, 1, Py_count, 1
     Py$ = Py$ + " " + $STR(Py(i))
@@ -120,7 +160,7 @@ msg$ = "   to " + jsonFilePath$
 PRINT msg$
 
 OUTPUT jsonFilePath$
-
+GETSYSTEMDATA 1
 waveCount = NWAV()
 primaryWave = PWAV()
 
@@ -157,7 +197,7 @@ ELSE
         entrPupilDiam = OPEV(id, 0,0,0,0,0,0)
     ENDIF
 ENDIF
-! end of buggy code
+
 id = OCOD("ENPP")
 entrPupilPos = OPEV(id, 0,0,0,0,0,0)
 id = OCOD("EXPP")
@@ -171,7 +211,14 @@ str$ = "name: " + fName$
 PRINT str$
 str$ = "units: " + $UNITS()
 PRINT str$
-
+FORMAT 1 INT
+PRINT "afocal: ", afocal_im_space
+PRINT "telecentric_obj_space: ", VEC1(25)
+FORMAT 5.2
+PRINT "paraxial_magnification: ", VEC1(16)
+PRINT "angular_magnification: ", VEC1(17)
+PRINT "EFFL: ", VEC1(7)
+PRINT "total_track: ", VEC1(18)
 FORMAT 2 INT
 PRINT "wavelength_count: ", waveCount
 PRINT "primary_wavelength: ", primaryWave
@@ -190,17 +237,21 @@ PRINT "aperture_data: {"
 FORMAT 6.3
 PRINT "  type : ", apertureType
 PRINT "  value: ", apertureValue
+PRINT "  WFNO : ", VEC1(10)
 PRINT "  D_im : ", exitPupilDiam
 PRINT "  D_obj: ", entrPupilDiam
-str$ = "  ENPP: " + $STR(entrPupilPos) + "  #relative to first surface"
+str$ = "  ENPP : " + $STR(entrPupilPos) + "  #relative to first surface"
 PRINT str$
-str$ = "  EXPP: " + $STR(exitPupilPos) + " #relative to image surface"
+str$ = "  EXPP : " + $STR(exitPupilPos) + " #relative to image surface"
 PRINT str$
 PRINT "}"
 PRINT
 FORMAT 3 INT
 PRINT "surface_count: ", surfCount
+PRINT "stop_surface_no: ", VEC1(23)
 PRINT "# index is 0 for air in Zemax"
+PRINT "# for each surface a chief ray trace data is computed"
+
 PRINT "surfaces: ["
 FOR i, 1, surfCount, 1
     FORMAT 3 INT
@@ -221,6 +272,62 @@ FOR i, 1, surfCount, 1
     PRINT str$
     PRINT "    index@d  : ", GIND(i)
     PRINT "    abbe     : ", GABB(i)
+    FOR ray, 1, selectedRayCount, 1
+        IF ray == 1 
+            PRINT "    axial_y  : {"
+        ELSE
+            IF ray == 2
+                PRINT "    chief_y  : {"
+            ELSE
+                IF ray == 3
+                    PRINT "    upper_y  : {"
+                ELSE
+                    IF ray == 4
+                        PRINT "    lower_y  : {"
+                    ELSE
+                        PRINT "    raytrace : {"
+                        coords$ = "                coords: [" + $STR(raytrace_Hx(ray)) + ", " + $STR(raytrace_Hy(ray)) + ", " + $STR(raytrace_Px(ray)) + ", " + $STR(raytrace_Py(ray)) + "]"
+                        PRINT coords$
+                    ENDIF
+                ENDIF
+            ENDIF
+        ENDIF
+        raga$ = ""
+        ragb$ = ""
+        reax$ = ""
+        reay$ = ""
+        ssag$ = ""
+        FOR k, 1, waveCount, 1
+            IF k > 1
+                raga$ = raga$ + ", "
+                ragb$ = ragb$ + ", "
+                reax$ = reax$ + ", "
+                reay$ = reay$ + ", "
+                ssag$ = ssag$ + ", "
+            ENDIF
+            id = OCOD("RAGA")
+            raga$ = raga$ + $STR(OPEV(id,i,k,raytrace_Hx(ray),raytrace_Hy(ray),raytrace_Px(ray),raytrace_Py(ray)))
+            id = OCOD("RAGB")
+            ragb$ = ragb$ + $STR(OPEV(id,i,k,raytrace_Hx(ray),raytrace_Hy(ray),raytrace_Px(ray),raytrace_Py(ray)))
+            id = OCOD("REAX")
+            reax$ = reax$ + $STR(OPEV(id,i,k,raytrace_Hx(ray),raytrace_Hy(ray),raytrace_Px(ray),raytrace_Py(ray)))
+            id = OCOD("REAY")
+            reay$ = reay$ + $STR(OPEV(id,i,k,raytrace_Hx(ray),raytrace_Hy(ray),raytrace_Px(ray),raytrace_Py(ray)))
+            id = OCOD("SSAG")
+            ssag$ = ssag$ + $STR(OPEV(id,i,k,raytrace_Hx(ray),raytrace_Hy(ray),raytrace_Px(ray),raytrace_Py(ray)))
+        NEXT
+        raga$ = "            RAGA: [" + raga$ + "]"
+        ragb$ = "            RAGB: [" + ragb$ + "]"
+        reax$ = "            REAX: [" + reax$ + "]"
+        reay$ = "            REAY: [" + reay$ + "]"
+        ssag$ = "            SSAG: [" + ssag$ + "]"
+        PRINT raga$
+        PRINT ragb$
+        PRINT reax$
+        PRINT reay$
+        PRINT ssag$
+        PRINT "            }"
+    NEXT
     PRINT "  },"
 NEXT
 PRINT "]"
@@ -232,60 +339,100 @@ id = OCOD("DIMX")
 PRINT "    DIMX_percent: ", OPEV(id, 0, primaryWave, 0, 0, 0,0)
 PRINT "}"
 PRINT
-PRINT "axial: ["
-FOR i, 1, Px_count, 1
-    FOR j, 1, Py_count, 1
-        PRINT "  {"
-        FORMAT 5.4
-        PRINT "  Px: ", Px(i)
-        PRINT "  Py: ", Py(j)
-        trax$ = ""
-        tray$ = ""
-        lona$ = ""
-        FOR k, 1, waveCount, 1
-            FORMAT 6.3 EXP
-            IF afocal_im_space
-                IF k > 1 
-                    lona$ = lona$ + ", "
-                ENDIF
-                id = OCOD("ANAY")
-                ! ANAY(void, wave, Hx, Hy, Px, Py)
-                lona$ = lona$ + $STR(OPEV(id, 0, k, 0, 0, Px(i), Py(j)))
-            ELSE
-                IF k > 1 
-                    lona$ = lona$ + ", "
-                ENDIF
-                id = OCOD("LONA")
-                ! LONA(surface, wave, zone)
-                lona$ = lona$ + $STR(OPEV(id, 0, k, Py(i), 0, 0, 0)) 
+PRINT "axial_x: ["
+FOR i, 1, Py_count, 1
+    PRINT "  {"
+    FORMAT 5.4
+    PRINT "  Px: ", Py(i) 
+    ! not a typo: Py coords are taken as tangential
+    trax$ = ""
+    lona$ = ""
+    anax$ = ""
+    FOR k, 1, waveCount, 1
+        FORMAT 6.3 EXP
+        IF afocal_im_space
+            IF k > 1 
+                anax$ = anax$ + ", "
             ENDIF
+            id = OCOD("ANAX")
+            ! ANAY(void, wave, Hx, Hy, Px, Py)
+            anax$ = anax$ + $STR(OPEV(id, 0, k, 0, 0, Py(i), 0))
+        ELSE
             IF k > 1 
                 trax$ = trax$ + ", "
-                tray$ = tray$ + ", "
             ENDIF
             id = OCOD("TRAX")
             ! TRAX(surface, wave, Hx, Hy, Px, Py)
-            trax$ = trax$ + $STR(OPEV(id, 0, k, 0, 0, Px(i), Py(j))) 
-            id = OCOD("TRAY")
-            ! TRAY(surface, wave, Hx, Hy, Px, Py)
-            tray$ = tray$ + $STR(OPEV(id, 0, k, 0, 0, Px(i), Py(j))) 
-        NEXT
+            trax$ = trax$ + $STR(OPEV(id, 0, k, 0, 0, Py(i), 0)) 
+            
+        ENDIF
+        IF k > 1 
+        lona$ = lona$ + ", "
+        ENDIF
+        id = OCOD("LONA")
+        ! LONA(wave, void, zone)
+        lona$ = lona$ + $STR(OPEV(id, k, 0, Py(i), 0, 0, 0)) 
+    NEXT
+    str$ = "  LONA: [" + lona$ + "]"
+    PRINT str$
+    IF afocal_im_space
+        str$ = "  ANAX: [" + anax$ + "]"
+        PRINT str$
+    ELSE
         str$ = "  TRAX: [" + trax$ + "]"
         PRINT str$
+    ENDIF
+    id = OCOD("OSCD")
+    ! OSCD(surface, wave, zone)
+    PRINT "  OSCD: ", OPEV(id, 0, primaryWave, Py(i), 0, 0, 0)
+    PRINT "  },"
+NEXT
+PRINT "]"
+PRINT "axial_y: ["
+FOR j, 1, Py_count, 1
+    PRINT "  {"
+    FORMAT 5.4
+    PRINT "  Py: ", Py(j)
+    tray$ = ""
+    lona$ = ""
+    anay$ = ""
+    FOR k, 1, waveCount, 1
+        FORMAT 6.3 EXP
+        IF afocal_im_space
+            IF k > 1 
+                anay$ = anay$ + ", "
+            ENDIF
+            id = OCOD("ANAY")
+            ! ANAY(void, wave, Hx, Hy, Px, Py)
+            anay$ = anay$ + $STR(OPEV(id, 0, k, 0, 0, 0, Py(j)))
+        ELSE
+            IF k > 1 
+                tray$ = tray$ + ", "
+            ENDIF
+            id = OCOD("TRAY")
+            ! TRAY(surface, wave, Hx, Hy, Px, Py)
+            tray$ = tray$ + $STR(OPEV(id, 0, k, 0, 0, 0, Py(j)))
+        ENDIF
+        IF k > 1 
+            lona$ = lona$ + ", "
+        ENDIF
+        id = OCOD("LONA")
+        ! LONA(wave, void, zone)
+        lona$ = lona$ + $STR(OPEV(id, k, 0, Py(j), 0, 0, 0)) 
+    NEXT
+    str$ = "  LONA: [" + lona$ + "]"
+    PRINT str$
+    IF afocal_im_space
+        str$ = "  ANAY: [" + anay$ + "]"
+        PRINT str$
+    ELSE
         str$ = "  TRAY: [" + tray$ + "]"
         PRINT str$
-        IF afocal_im_space
-            str$ = "  ANAY: [" + lona$ + "]"
-            PRINT str$
-        ELSE
-            str$ = "  LONA: [" + lona$ + "]"
-            PRINT str$
-        ENDIF
-        id = OCOD("OSCD")
-        ! OSCD(surface, wave, zone)
-        PRINT "  OSCD:", OPEV(id, 0, primaryWave, Py(j), 0, 0, 0)
-        PRINT "  },"
-    NEXT
+    ENDIF
+    id = OCOD("OSCD")
+    ! OSCD(surface, wave, zone)
+    PRINT "  OSCD: ", OPEV(id, 0, primaryWave, Py(j), 0, 0, 0)
+    PRINT "  },"
 NEXT
 PRINT "]"
 PRINT
@@ -310,8 +457,8 @@ FOR field, 1, fieldCount, 1
     FORMAT 2 INT
     PRINT "    no                     : ", field
     FORMAT 6.3
-    PRINT "    Hx                     :", Hx(field)
-    PRINT "    Hy                     :", Hy(field)
+    PRINT "    Hx                     : ", Hx(field)
+    PRINT "    Hy                     : ", Hy(field)
     PRINT "    x_field                : ", FLDX(field)
     PRINT "    y_field                : ", FLDY(field)
     PRINT "    vignetting_angle       : ", FVAN(field)
@@ -360,6 +507,15 @@ FOR field, 1, fieldCount, 1
         reay$ = reay$ + "]"
         PRINT reay$ 
     ENDIF
+    id = OCOD("FCGS")
+    str$ = "      FCGS: " + $STR(OPEV(id,0,primaryWave,Hx(field),Hy(field),0,0))
+    PRINT str$
+    id = OCOD("FCGT")
+    str$ = "      FCGT: " + $STR(OPEV(id,0,primaryWave,Hx(field),Hy(field),0,0))
+    PRINT str$
+    id = OCOD("REAR")
+    str$ = "      REAR: " + $STR(OPEV(id,0,primaryWave,Hx(field),Hy(field),0,0))
+    PRINT str$
     id = OCOD("DISG")
     ! DISG(field, wave, Hx, Hy, Px, Py)
     str$ = "      DISG: " + $STR(OPEV(id, maxField, primaryWave, Hx(field), Hy(field), 0, 0)) + " #in %"
