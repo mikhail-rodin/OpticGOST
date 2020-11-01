@@ -443,7 +443,6 @@ PRINT "# 0 - degrees object space"
 PRINT "# 1 - object heigth in lens units"
 PRINT "# 2 - paraxial image height in lens units"
 PRINT "# 3 - real image heigth in lens units"
-PRINT "field_count: ", fieldCount
 PRINT "# full half-field angle or height"
 FORMAT 6.3
 str$ = "max_field: " + $STR(maxField)
@@ -451,6 +450,9 @@ PRINT str$
 SETVIG 
 PRINT "fields: ["
 FOR field, 1, fieldCount, 1
+    IF (FLDX(field)==0) & (FLDY(field)==0)
+        GOTO 101
+    ENDIF
     Hx(field) = FLDX(field)/maxField
     Hy(field) = FLDY(field)/maxField
     PRINT "  {"
@@ -749,5 +751,6 @@ FOR field, 1, fieldCount, 1
     ENDIF
     PRINT "    ]"
 PRINT "  },"
+LABEL 101
 NEXT
 PRINT "]"
