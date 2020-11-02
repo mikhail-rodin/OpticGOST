@@ -470,20 +470,52 @@ FOR field, 1, fieldCount, 1
     PRINT "    vignetting_decenter_y  : ", FVDY(field)
     PRINT "    chief: {"
     FORMAT 6.3 EXP 
-    IF afocal_im_space
+    rang$ =      "      RANG: ["
+    entr_rang$ = " entr_RANG: ["
+    h_1$ =       "       h_1: ["
+    h_q$ =       "       h_q: ["
+    FOR wave, 1, waveCount, 1
+        IF wave > 1
+            rang$ = rang$ + ", "
+            entr_rang$ = entr_rang$ + ", "
+            h_1$ = h_1$ + ", "
+            h_q$ = h_q$ + ", "
+        ENDIF
+        ! to calculate real pupil positions, we need the following:
+        ! 1. exit ray angle RANG(surface, wave, Hx, Hy, Px, Py)
+        ! 2. chief ray height at last surface
+        ! 3. entrance ray angle
+        ! 4. chief ray height at 1st surface
+        ! and for finite object space we also need image height. That's all.
         id = OCOD("RANG")
-        rang$ = "      RANG: ["
-        FOR wave, 1, waveCount, 1
-            IF wave > 1
-                rang$ = rang$ + ", "
+        opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
+        rang$ = rang$ + $STR(opval) 
+        opval = OPEV(id, 1, wave, Hx(field), Hy(field), 0, 0)
+        entr_rang$ = entr_rang$ + $STR(opval) 
+        IF FLDX(field) == 0
+            id = OCOD("REAY")
+        ELSE
+            IF FLDY(field) == 0
+                id = OCOD("REAX")
+            ELSE 
+                GOTO 201
             ENDIF
-            ! RANG(surface, wave, Hx, Hy, Px, Py)
-            opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
-            rang$ = rang$ + $STR(opval) 
-        NEXT
-        rang$ = rang$ + "]"
-        PRINT rang$
-    ELSE
+        ENDIF
+        opval = OPEV(id, 1, wave, Hx(field), Hy(field), 0, 0)
+        h_1$ = h_1$ + $STR(opval) 
+        opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
+        h_q$ = h_q$ + $STR(opval) 
+    NEXT
+    rang$ = rang$ + "]"
+    entr_rang$ = entr_rang$ + "]"
+    h_1$ = h_1$ + "]"
+    h_q$ = h_q$ + "]"
+    PRINT rang$
+    PRINT entr_rang$
+    PRINT h_1$
+    PRINT h_q$
+    LABEL 201
+    IF afocal_im_space == 0 
         id = OCOD("REAX")
         reax$ = "      REAX: ["
         FOR wave, 1, waveCount, 1
@@ -533,12 +565,12 @@ FOR field, 1, fieldCount, 1
                 PRINT   "        { Px: ", Px(coord)
                 FORMAT 6.3 EXP
                 trax$ = "        TRAX: ["
-                id = OCOD("TRAX")
                 FOR wave, 1, waveCount, 1
                     IF wave > 1 
                         trax$ = trax$ + ", "
                     ENDIF
                     ! TRAX(surface, wave, Hx, Hy, Px, Py)
+                    id = OCOD("TRAX")
                     opval = OPEV(id,surfCount,wave,Hx(field),0,Px(coord),0)
                     trax$ = trax$ + $STR(opval)
                 NEXT
@@ -551,6 +583,7 @@ FOR field, 1, fieldCount, 1
                 FORMAT 6.3
                 PRINT   "        { Px: ", Px(coord)
                 FORMAT 6.3 EXP
+                ! for afocal systems we calculate angular transverse aberrations
                 anax$ = "        ANAX: ["
                 id = OCOD("ANAX")
                 FOR wave, 1, waveCount, 1
