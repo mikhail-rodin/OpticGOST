@@ -329,6 +329,7 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         surface_count = Int(.Item("surface_count"))
         Py_coord_count = Int(.Item("Py_coord_count"))
         
+        .Item("afocal") = CBool(.Item("afocal"))
         .Item("wavelengths") = CDblArr(delEmptyLines(parseArray(.Item("wavelengths"))))
         
         Dim fieldDict As Scripting.Dictionary
@@ -348,6 +349,14 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
                 With chiefDict
                     .Item("REAX") = CDblArr(delEmptyLines(parseArray(.Item("REAX"))))
                     .Item("REAY") = CDblArr(delEmptyLines(parseArray(.Item("REAY"))))
+                    .Item("RANG") = CDblArr(delEmptyLines(parseArray(.Item("RANG"))))
+                    .Item("entr_RANG") = CDblArr(delEmptyLines(parseArray(.Item("entr_RANG"))))
+                        .Item("h_1") = CDblArr(delEmptyLines(parseArray(.Item("h_1"))))
+                    .Item("h_q") = CDblArr(delEmptyLines(parseArray(.Item("h_q"))))
+                    .Item("FCGS") = Val(.Item("FCGS"))
+                    .Item("FCGT") = Val(.Item("FCGT"))
+                    .Item("REAR") = Val(.Item("REAR"))
+                    .Item("DISG") = Val(.Item("DISG"))
                 End With
                 Set .Item("chief") = chiefDict
                 
@@ -411,10 +420,39 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         Dim surfaceDict As Scripting.Dictionary
         Dim surfaceDicts As Collection
         Set surfaceDicts = New Collection
+        Dim raytraceDict As Scripting.Dictionary
         For surf = BASE To surface_count - 1
             Set surfaceDict = New Scripting.Dictionary
             Set surfaceDict = _
                 parseOneLevel(withoutOuterBrackets(parseArray(.Item("surfaces"))(surf)))
+            With surfaceDict
+                .Item("power") = Val(.Item("power"))
+                .Item("curvature") = Val(.Item("curvature"))
+                .Item("thickness") = Val(.Item("thickness"))
+                .Item("conic") = Val(.Item("conic"))
+                .Item("edge") = Val(.Item("edge"))
+                .Item("index@d") = Val(.Item("index@d"))
+                .Item("abbe") = Val(.Item("abbe"))
+            End With
+            Dim rtrNames(3) As String
+            rtrNames(0) = "axial_y"
+            rtrNames(1) = "chief_y"
+            rtrNames(2) = "upper_y"
+            rtrNames(3) = "lower_y"
+            Dim rtrName As Variant
+            For Each rtrName In rtrNames
+                Set raytraceDict = New Scripting.Dictionary
+                Set raytraceDict = _
+                    parseOneLevel(withoutOuterBrackets(surfaceDict.Item(rtrName)))
+                With raytraceDict
+                    .Item("RAGA") = CDblArr(delEmptyLines(parseArray(.Item("RAGA"))))
+                    .Item("RAGB") = CDblArr(delEmptyLines(parseArray(.Item("RAGB"))))
+                    .Item("REAX") = CDblArr(delEmptyLines(parseArray(.Item("REAX"))))
+                    .Item("REAY") = CDblArr(delEmptyLines(parseArray(.Item("REAY"))))
+                    .Item("SSAG") = CDblArr(delEmptyLines(parseArray(.Item("SSAG"))))
+                End With
+                Set surfaceDict.Item(rtrName) = raytraceDict
+            Next rtrName
             surfaceDicts.Add surfaceDict
         Next surf
         Set .Item("surfaces") = surfaceDicts
@@ -423,29 +461,54 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         Dim apertureDict As Scripting.Dictionary
         Set apertureDict = New Scripting.Dictionary
         Set apertureDict = parseOneLevel(withoutOuterBrackets(.Item("aperture_data")))
+        With apertureDict
+            .Item("D_im") = Val(.Item("D_im"))
+            .Item("D_obj") = Val(.Item("D_obj"))
+            .Item("ENPP") = Val(.Item("ENPP"))
+            .Item("EXPP") = Val(.Item("EXPP"))
+            .Item("WFNO") = Val(.Item("WFNO"))
+            .Item("value") = Val(.Item("value"))
+            .Item("type") = Int(.Item("type"))
+        End With
         Set .Item("aperture_data") = apertureDict
         'aperture data dict added
         
-        Dim axialDicts As Collection
-        Set axialDicts = New Collection
+        Dim axialXDicts As Collection
+        Set axialXDicts = New Collection
         Dim axialArr() As String
-        axialArr = delEmptyLines(parseArray(.Item("axial")))
+        axialArr = delEmptyLines(parseArray(.Item("axial_x")))
         Dim axialObjUnparsed As Variant
+        Dim axialDict As Scripting.Dictionary
         For Each axialObjUnparsed In axialArr
-            Dim axialDict As Scripting.Dictionary
             Set axialDict = New Scripting.Dictionary
             Set axialDict = parseOneLevel(withoutOuterBrackets(axialObjUnparsed))
             With axialDict
                 .Item("Px") = Val(.Item("Px"))
-                .Item("Py") = Val(.Item("Py"))
                 .Item("OSCD") = Val(.Item("OSCD"))
                 .Item("TRAX") = CDblArr(delEmptyLines(parseArray(.Item("TRAX"))))
+                .Item("LONA") = CDblArr(delEmptyLines(parseArray(.Item("LONA"))))
+                .Item("ANAX") = CDblArr(delEmptyLines(parseArray(.Item("ANAX"))))
+            End With
+            axialXDicts.Add axialDict
+        Next axialObjUnparsed
+        Set .Item("axial_x") = axialXDicts
+
+        Dim axialYDicts As Collection
+        Set axialYDicts = New Collection
+        axialArr = delEmptyLines(parseArray(.Item("axial_y")))
+        For Each axialObjUnparsed In axialArr
+            Set axialDict = New Scripting.Dictionary
+            Set axialDict = parseOneLevel(withoutOuterBrackets(axialObjUnparsed))
+            With axialDict
+                .Item("Py") = Val(.Item("Py"))
+                .Item("OSCD") = Val(.Item("OSCD"))
                 .Item("TRAY") = CDblArr(delEmptyLines(parseArray(.Item("TRAY"))))
                 .Item("LONA") = CDblArr(delEmptyLines(parseArray(.Item("LONA"))))
+                .Item("ANAY") = CDblArr(delEmptyLines(parseArray(.Item("ANAY"))))
             End With
-            axialDicts.Add axialDict
+            axialYDicts.Add axialDict
         Next axialObjUnparsed
-        Set .Item("axial") = axialDicts
+        Set .Item("axial_y") = axialYDicts
         
         Dim maxAberDict As Scripting.Dictionary
         Set maxAberDict = New Scripting.Dictionary

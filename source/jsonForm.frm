@@ -24,12 +24,25 @@ Private Sub fieldDel_Click()
     Call jsonDisplay.delFields(CLens)
     Call jsonDisplay.refreshFields(CLens)
 End Sub
+Private Sub generateTablesBtn_Click()
+    Dim aberSheet As Excel.Worksheet
+    Dim rndSheet As Excel.Worksheet
+    With Me
+        If .aberTableChk.value = True Then
+            Set aberSheet = Application.Worksheets.Add
+            Call jsonDisplay.fillAberTable(CLens, aberSheet.Range("A1"))
+        End If
+        If .rndTableChk.value = True Then
+            Set rndSheet = Application.Worksheets.Add
+        End If
+    End With
+End Sub
 
 Private Sub importBtn_Click()
     Dim filePath As String
     Dim json As String
-    'filePath = jsonForm.pathBox.text
-    filePath = "C:\Users\Rodin\Documents\optics\TV-wide70deg\retrofocus_v6\retrofocus_v6mod1_lensdata.json"
+    filePath = jsonForm.pathBox.text
+    'filePath = "C:\Users\Rodin\Documents\optics\TV-wide70deg\retrofocus_v6\retrofocus_v6mod1_lensdata.json"
     json = hjsonParse.readTextToString(filePath)
     Call CLens.parse(json)
     With jsonForm
@@ -40,6 +53,11 @@ Private Sub importBtn_Click()
         .waveAdd.Enabled = True
         .waveDel.Enabled = True
         .generateTablesBtn.Enabled = True
+        .tablesFrm.Enabled = True
+        .OPDchk.Enabled = True
+        .anamorphicChk.Enabled = True
+        .aberTableChk.Enabled = True
+        .rndTableChk.Enabled = True
     End With
     Call jsonDisplay.refreshWaves(CLens)
     Call jsonDisplay.refreshFields(CLens)
@@ -66,6 +84,7 @@ Private Sub openFileBtn_Click()
     End With
     With jsonForm
         .pathBox.text = strFile
+        .importBtn.Enabled = True
     End With
 End Sub
 
@@ -83,6 +102,8 @@ Private Sub UserForm_Initialize()
         .generateTablesBtn.Enabled = False
         .tablesFrm.Enabled = False
         
+        .importBtn.Enabled = False
+        
         .OPDchk.Enabled = False
         
         .status.Caption = "Откройте файл JSON, сохранённый макросом JSONexport.zpl "
@@ -97,4 +118,16 @@ End Sub
 Private Sub waveDel_Click()
     Call jsonDisplay.delWaves(CLens)
     Call jsonDisplay.refreshWaves(CLens)
+End Sub
+
+Private Sub waveSel_AfterUpdate()
+    Dim isAllowedWaveCount As Boolean
+    isAllowedWaveCount = jsonDisplay.checkWaveCount(CLens)
+    If isAllowedWaveCount Then
+        Me.generateTablesBtn.Enabled = True
+    Else
+        If Me.aberTableChk.value = True Then
+            Me.generateTablesBtn.Enabled = False
+        End If
+    End If
 End Sub

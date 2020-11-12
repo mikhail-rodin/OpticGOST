@@ -234,8 +234,9 @@ wavelist$ = wavelist$ + "]"
 PRINT wavelist$
 PRINT
 PRINT "aperture_data: {"
-FORMAT 6.3
+FORMAT 1 INT
 PRINT "  type : ", apertureType
+FORMAT 6.3
 PRINT "  value: ", apertureValue
 PRINT "  WFNO : ", VEC1(10)
 PRINT "  D_im : ", exitPupilDiam
@@ -340,99 +341,107 @@ PRINT "    DIMX_percent: ", OPEV(id, 0, primaryWave, 0, 0, 0,0)
 PRINT "}"
 PRINT
 PRINT "axial_x: ["
-FOR i, 1, Py_count, 1
-    PRINT "  {"
-    FORMAT 5.4
-    PRINT "  Px: ", Py(i) 
-    ! not a typo: Py coords are taken as tangential
-    trax$ = ""
-    lona$ = ""
-    anax$ = ""
-    FOR k, 1, waveCount, 1
-        FORMAT 6.3 EXP
-        IF afocal_im_space
-            IF k > 1 
+FOR coord, 1, Py_count, 1
+    IF Py(coord) >= 0 
+        PRINT "  {"
+        FORMAT 5.4
+        PRINT "  Px: ", Py(coord) 
+        ! not a typo: Py coords are taken as tangential
+        trax$ = ""
+        lona$ = ""
+        anax$ = ""
+        entr_rang$ = ""
+        exit_rang$ = ""
+        FOR wave, 1, waveCount, 1
+            FORMAT 6.3 EXP
+            IF wave > 1 
                 anax$ = anax$ + ", "
+                trax$ = trax$ + ", "
+                lona$ = lona$ + ", "
+                entr_rang$ = entr_rang$ + ", "
+                exit_rang$ = exit_rang$ + ", "
             ENDIF
             id = OCOD("ANAX")
             ! ANAY(void, wave, Hx, Hy, Px, Py)
-            anax$ = anax$ + $STR(OPEV(id, 0, k, 0, 0, Py(i), 0))
-        ELSE
-            IF k > 1 
-                trax$ = trax$ + ", "
-            ENDIF
+            anax$ = anax$ + $STR(OPEV(id, 0, wave, 0, 0, Py(coord), 0))
             id = OCOD("TRAX")
             ! TRAX(surface, wave, Hx, Hy, Px, Py)
-            trax$ = trax$ + $STR(OPEV(id, 0, k, 0, 0, Py(i), 0)) 
-            
+            trax$ = trax$ + $STR(OPEV(id, 0, wave, 0, 0, Py(coord), 0)) 
+            id = OCOD("LONA")
+            ! LONA(wave, void, zone)
+            lona$ = lona$ + $STR(OPEV(id, wave, 0, Py(coord), 0, 0, 0)) 
+            ! RANG(surface, wave, Hx, Hy, Px, Py)
+            id = OCOD("RANG")
+            entr_rang$ = entr_rang$ + $STR(OPEV(id,0,wave,0,0,Py(coord),0))
+            exit_rang$ = exit_rang$ + $STR(OPEV(id,surfCount,wave,0,0,Py(coord),0))
+        NEXT
+        lona$ = "  LONA: [" + lona$ + "]"
+        entr_rang$ = "  entr_RANG: [" + entr_rang$ + "]"
+        exit_rang$ = "  exit_RANG: [" + exit_rang$ + "]"
+        anax$ = "  ANAX: [" + anax$ + "]"
+        trax$ = "  TRAX: [" + trax$ + "]"
+        PRINT lona$
+        PRINT entr_rang$
+        PRINT exit_rang$
+        IF afocal_im_space
+            PRINT anax$
+        ELSE
+            PRINT trax$
         ENDIF
-        IF k > 1 
-        lona$ = lona$ + ", "
-        ENDIF
-        id = OCOD("LONA")
-        ! LONA(wave, void, zone)
-        lona$ = lona$ + $STR(OPEV(id, k, 0, Py(i), 0, 0, 0)) 
-    NEXT
-    str$ = "  LONA: [" + lona$ + "]"
-    PRINT str$
-    IF afocal_im_space
-        str$ = "  ANAX: [" + anax$ + "]"
-        PRINT str$
-    ELSE
-        str$ = "  TRAX: [" + trax$ + "]"
-        PRINT str$
+        id = OCOD("OSCD")
+        ! OSCD(surface, wave, zone)
+        PRINT "  OSCD: ", OPEV(id, 0, primaryWave, Py(i), 0, 0, 0)
+        PRINT "  },"
     ENDIF
-    id = OCOD("OSCD")
-    ! OSCD(surface, wave, zone)
-    PRINT "  OSCD: ", OPEV(id, 0, primaryWave, Py(i), 0, 0, 0)
-    PRINT "  },"
 NEXT
 PRINT "]"
 PRINT "axial_y: ["
 FOR j, 1, Py_count, 1
-    PRINT "  {"
-    FORMAT 5.4
-    PRINT "  Py: ", Py(j)
-    tray$ = ""
-    lona$ = ""
-    anay$ = ""
-    FOR k, 1, waveCount, 1
-        FORMAT 6.3 EXP
+    IF Py(j) >= 0
+        PRINT "  {"
+        FORMAT 5.4
+        PRINT "  Py: ", Py(j)
+        tray$ = ""
+        lona$ = ""
+        anay$ = ""
+        FOR k, 1, waveCount, 1
+            FORMAT 6.3 EXP
+            IF afocal_im_space
+                IF k > 1 
+                    anay$ = anay$ + ", "
+                ENDIF
+                id = OCOD("ANAY")
+                ! ANAY(void, wave, Hx, Hy, Px, Py)
+                anay$ = anay$ + $STR(OPEV(id, 0, k, 0, 0, 0, Py(j)))
+            ELSE
+                IF k > 1 
+                    tray$ = tray$ + ", "
+                ENDIF
+                id = OCOD("TRAY")
+                ! TRAY(surface, wave, Hx, Hy, Px, Py)
+                tray$ = tray$ + $STR(OPEV(id, 0, k, 0, 0, 0, Py(j)))
+            ENDIF
+            IF k > 1 
+                lona$ = lona$ + ", "
+            ENDIF
+            id = OCOD("LONA")
+            ! LONA(wave, void, zone)
+            lona$ = lona$ + $STR(OPEV(id, k, 0, Py(j), 0, 0, 0)) 
+        NEXT
+        str$ = "  LONA: [" + lona$ + "]"
+        PRINT str$
         IF afocal_im_space
-            IF k > 1 
-                anay$ = anay$ + ", "
-            ENDIF
-            id = OCOD("ANAY")
-            ! ANAY(void, wave, Hx, Hy, Px, Py)
-            anay$ = anay$ + $STR(OPEV(id, 0, k, 0, 0, 0, Py(j)))
+            str$ = "  ANAY: [" + anay$ + "]"
+            PRINT str$
         ELSE
-            IF k > 1 
-                tray$ = tray$ + ", "
-            ENDIF
-            id = OCOD("TRAY")
-            ! TRAY(surface, wave, Hx, Hy, Px, Py)
-            tray$ = tray$ + $STR(OPEV(id, 0, k, 0, 0, 0, Py(j)))
+            str$ = "  TRAY: [" + tray$ + "]"
+            PRINT str$
         ENDIF
-        IF k > 1 
-            lona$ = lona$ + ", "
-        ENDIF
-        id = OCOD("LONA")
-        ! LONA(wave, void, zone)
-        lona$ = lona$ + $STR(OPEV(id, k, 0, Py(j), 0, 0, 0)) 
-    NEXT
-    str$ = "  LONA: [" + lona$ + "]"
-    PRINT str$
-    IF afocal_im_space
-        str$ = "  ANAY: [" + anay$ + "]"
-        PRINT str$
-    ELSE
-        str$ = "  TRAY: [" + tray$ + "]"
-        PRINT str$
+        id = OCOD("OSCD")
+        ! OSCD(surface, wave, zone)
+        PRINT "  OSCD: ", OPEV(id, 0, primaryWave, Py(j), 0, 0, 0)
+        PRINT "  },"
     ENDIF
-    id = OCOD("OSCD")
-    ! OSCD(surface, wave, zone)
-    PRINT "  OSCD: ", OPEV(id, 0, primaryWave, Py(j), 0, 0, 0)
-    PRINT "  },"
 NEXT
 PRINT "]"
 PRINT
@@ -452,6 +461,7 @@ PRINT "fields: ["
 FOR field, 1, fieldCount, 1
     IF (FLDX(field)==0) & (FLDY(field)==0)
         GOTO 101
+        ! next field w/o closing bracket
     ENDIF
     Hx(field) = FLDX(field)/maxField
     Hy(field) = FLDY(field)/maxField
@@ -468,7 +478,7 @@ FOR field, 1, fieldCount, 1
     PRINT "    vignetting_compession_y: ", FVCY(field)
     PRINT "    vignetting_decenter_x  : ", FVDX(field)
     PRINT "    vignetting_decenter_y  : ", FVDY(field)
-    PRINT "    chief: {"
+    ! chief ray aberrations
     FORMAT 6.3 EXP 
     rang$ =      "      RANG: ["
     entr_rang$ = " entr_RANG: ["
@@ -498,47 +508,45 @@ FOR field, 1, fieldCount, 1
             IF FLDY(field) == 0
                 id = OCOD("REAX")
             ELSE 
-                GOTO 201
+                PRINT "  },"
+                GOTO 101
+                ! 101 = next field
             ENDIF
         ENDIF
         opval = OPEV(id, 1, wave, Hx(field), Hy(field), 0, 0)
         h_1$ = h_1$ + $STR(opval) 
-        opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
+        opval = OPEV(id, surfCount-1, wave, Hx(field), Hy(field), 0, 0)
         h_q$ = h_q$ + $STR(opval) 
     NEXT
     rang$ = rang$ + "]"
     entr_rang$ = entr_rang$ + "]"
     h_1$ = h_1$ + "]"
     h_q$ = h_q$ + "]"
+    PRINT "    chief: {"
     PRINT rang$
     PRINT entr_rang$
     PRINT h_1$
     PRINT h_q$
     LABEL 201
     IF afocal_im_space == 0 
-        id = OCOD("REAX")
         reax$ = "      REAX: ["
-        FOR wave, 1, waveCount, 1
-            IF wave > 1
-                reax$ = reax$ + ", "
-            ENDIF
-            ! REAX(surface, wave, Hx, Hy, Px, Py)
-            opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
-            reax$ = reax$ + $STR(opval) 
-        NEXT
-        reax$ = reax$ + "]"
-        PRINT reax$ 
-        id = OCOD("REAY")
         reay$ = "      REAY: ["
         FOR wave, 1, waveCount, 1
             IF wave > 1
+                reax$ = reax$ + ", "
                 reay$ = reay$ + ", "
             ENDIF
-            ! REAY(surface, wave, Hx, Hy, Px, Py)
+            ! REAX(surface, wave, Hx, Hy, Px, Py)
+            id = OCOD("REAX")
+            opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
+            reax$ = reax$ + $STR(opval) 
+            id = OCOD("REAY")
             opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
             reay$ = reay$ + $STR(opval) 
         NEXT
+        reax$ = reax$ + "]"
         reay$ = reay$ + "]"
+        PRINT reax$ 
         PRINT reay$ 
     ENDIF
     id = OCOD("FCGS")
@@ -552,238 +560,137 @@ FOR field, 1, fieldCount, 1
     PRINT str$
     id = OCOD("DISG")
     ! DISG(field, wave, Hx, Hy, Px, Py)
-    str$ = "      DISG: " + $STR(OPEV(id, maxField, primaryWave, Hx(field), Hy(field), 0, 0)) + " #in %"
+    str$ = "      DISG: " + $STR(OPEV(id, maxField, primaryWave, Hx(field), Hy(field), 0, 0)) 
     PRINT str$
     PRINT "    },"
     PRINT "    tangential: ["
     ! if Hy = 0, assume that tangential line is Py=0 (useful for anamorphic lenses etc)
     ! if Hx = 0 (usual case), find aberrations for varying Py
-    IF FLDY(field) == 0
-        IF afocal_im_space == 0
-            FOR coord, 1, Px_count, 1
-                FORMAT 6.3
-                PRINT   "        { Px: ", Px(coord)
-                FORMAT 6.3 EXP
-                trax$ = "        TRAX: ["
-                FOR wave, 1, waveCount, 1
-                    IF wave > 1 
-                        trax$ = trax$ + ", "
-                    ENDIF
-                    ! TRAX(surface, wave, Hx, Hy, Px, Py)
-                    id = OCOD("TRAX")
-                    opval = OPEV(id,surfCount,wave,Hx(field),0,Px(coord),0)
-                    trax$ = trax$ + $STR(opval)
-                NEXT
-                trax$ = trax$ + "]"
-                PRINT trax$
-                PRINT    "        },"
-            NEXT 
+    FORMAT 6.3
+    FOR coord, 1, Py_count, 1
+        FORMAT 6.3
+        IF FLDY(field) == 0
+            PRINT   "        { Px: ", Py(coord)
         ELSE
-            FOR coord, 1, Px_count, 1
-                FORMAT 6.3
-                PRINT   "        { Px: ", Px(coord)
-                FORMAT 6.3 EXP
-                ! for afocal systems we calculate angular transverse aberrations
-                anax$ = "        ANAX: ["
-                id = OCOD("ANAX")
-                FOR wave, 1, waveCount, 1
-                    IF wave > 1 
-                        anax$ = anax$ + ", "
-                    ENDIF
-                    ! ANAX(void, wave, Hx, Hy, Px, Py)
-                    opval = OPEV(id,0,wave,Hx(field),0,Px(coord),0)
-                    anax$ = anax$ + $STR(opval)
-                NEXT
-                anax$ = anax$ + "]"
-                PRINT anax$
-                PRINT "        },"
-            NEXT           
+            PRINT   "        { Py: ", Py(coord)
         ENDIF
-    ELSE
-        IF FLDX(field) == 0
-            FORMAT 6.3
-            IF afocal_im_space == 0
-                FOR coord, 1, Py_count, 1
-                    FORMAT 6.3
-                    PRINT   "        { Py: ", Py(coord)
-                    FORMAT 6.3 EXP
-                    tray$ = "        TRAY: ["
-                    id = OCOD("TRAY")
-                    FOR wave, 1, waveCount, 1
-                        IF wave > 1 
-                            tray$ = tray$ + ", "
-                        ENDIF
-                        ! TRAY(surface, wave, Hx, Hy, Px, Py)
-                        opval = OPEV(id,surfCount,wave,0, Hy(field), 0, Py(coord))
-                        tray$ = tray$ + $STR(opval)
-                    NEXT
-                    tray$ = tray$ + "]"
-                    PRINT tray$
-                    PRINT "        },"
-                NEXT 
+        FORMAT 6.3 EXP
+        trax$ = "        TRAX: ["
+        tray$ = "        TRAY: ["
+        anax$ = "        ANAX: ["
+        anay$ = "        ANAY: ["
+        FOR wave, 1, waveCount, 1
+            IF wave > 1 
+                trax$ = trax$ + ", "
+                anax$ = anax$ + ", "
+                tray$ = tray$ + ", "
+                anay$ = anay$ + ", "
+            ENDIF
+            ! TRAX(surface, wave, Hx, Hy, Px, Py)
+            id = OCOD("TRAX")
+            opval = OPEV(id,surfCount,wave,Hx(field),0,Py(coord),0)
+            trax$ = trax$ + $STR(opval)
+            id = OCOD("ANAX")
+            opval = OPEV(id,0,wave,Hx(field),0,Py(coord),0)
+            anax$ = anax$ + $STR(opval)
+            ! TRAY(surface, wave, Hx, Hy, Px, Py)
+            id = OCOD("TRAY")
+            opval = OPEV(id,surfCount,wave,0, Hy(field), 0, Py(coord))
+            tray$ = tray$ + $STR(opval)
+            ! ANAY(void, wave, Hx, Hy, Px, Py)
+            id = OCOD("ANAY")
+            opval = OPEV(id,0,wave,0, Hy(field), 0, Py(coord))
+            anay$ = anay$ + $STR(opval)
+        NEXT
+        tray$ = tray$ + "]"
+        anay$ = anay$ + "]"
+        trax$ = trax$ + "]"
+        anax$ = anax$ + "]"
+        IF afocal_im_space
+            IF FLDY(field) == 0
+                PRINT anax$
             ELSE
-                FOR coord, 1, Py_count, 1
-                    FORMAT 6.3
-                    PRINT   "        { Py: ", Py(coord)
-                    FORMAT 6.3 EXP
-                    anay$ = "        ANAY: ["
-                    id = OCOD("ANAY")
-                    FOR wave, 1, waveCount, 1
-                        IF wave > 1 
-                            anay$ = anay$ + ", "
-                        ENDIF
-                        ! ANAY(void, wave, Hx, Hy, Px, Py)
-                        opval = OPEV(id,0,wave,0, Hy(field), 0, Py(coord))
-                        anay$ = anay$ + $STR(opval)
-                    NEXT
-                    anay$ = anay$ + "]"
-                    PRINT anay$
-                    PRINT "        },"
-                NEXT
+                PRINT anay$
+            ENDIF
+        ELSE
+            IF FLDY(field) == 0
+                PRINT trax$
+            ELSE
+                PRINT tray$
             ENDIF
         ENDIF
-    ENDIF
+        PRINT "        },"
+    NEXT 
     PRINT "    ]"
     PRINT "    sagittal: ["
-    IF FLDX(field) == 0
-    ! then X coord is sagittal
-        FORMAT 6.3 
-        IF afocal_im_space == 0
-            FOR coord, 1, Px_count, 1
-                FORMAT 6.3
+    FOR coord, 1, Px_count, 1
+        IF Px(coord) > 0 
+            FORMAT 6.3
+            IF FLDY(field) == 0
+                PRINT   "        { Py: ", Px(coord)
+            ELSE
                 PRINT   "        { Px: ", Px(coord)
-                FORMAT 6.3 EXP
-                trax$ = "        TRAX: ["
-                id = OCOD("TRAX")
-                FOR wave, 1, waveCount, 1
-                    IF wave > 1 
-                        trax$ = trax$ + ", "
-                    ENDIF
+            ENDIF
+            FORMAT 6.3 EXP
+            trax$ = "        TRAX: ["
+            tray$ = "        TRAY: ["
+            anax$ = "        ANAX: ["
+            anay$ = "        ANAY: ["
+            FOR wave, 1, waveCount, 1
+                IF wave > 1 
+                    trax$ = trax$ + ", "
+                    tray$ = tray$ + ", "
+                    anax$ = anax$ + ", "
+                    anay$ = anay$ + ", "
+                ENDIF
+                IF FLDY(field) == 0
                     ! TRAX(surface, wave, Hx, Hy, Px, Py)
+                    id = OCOD("TRAX")
+                    opval = OPEV(id,surfCount,wave,Hx(field),0,0,Px(coord))
+                    trax$ = trax$ + $STR(opval)
+                    id = OCOD("TRAY")
+                    opval = OPEV(id,surfCount,wave,Hx(field),0,0,Px(coord))
+                    tray$ = tray$ + $STR(opval)
+                    ! ANAX(void, wave, Hx, Hy, Py, Py)
+                    id = OCOD("ANAX")
+                    opval = OPEV(id,surfCount,wave,Hx(field),0,0,Px(coord))
+                    anax$ = anax$ + $STR(opval)
+                    id = OCOD("ANAY")
+                    opval = OPEV(id,surfCount,wave,Hx(field),0,0,Px(coord))
+                    anay$ = anay$ + $STR(opval)
+                ELSE
+                    ! TRAX(surface, wave, Hx, Hy, Px, Py)
+                    id = OCOD("TRAX")
                     opval = OPEV(id,surfCount,wave,0,Hy(field),Px(coord),0)
                     trax$ = trax$ + $STR(opval)
-                NEXT
-                trax$ = trax$ + "]"
-                PRINT trax$
-                tray$ = "        TRAY: ["
-                id = OCOD("TRAY")
-                FOR wave, 1, waveCount, 1
-                    IF wave > 1 
-                        tray$ = tray$ + ", "
-                    ENDIF
-                    ! TRAY(surface, wave, Hx, Hy, Px, Py)
-                    opval = OPEV(id,surfCount,wave,0, Hy(field), Px(coord), 0)
-                    tray$ = tray$ + $STR(opval)
-                NEXT
-                tray$ = tray$ + "]"
-                PRINT tray$
-                PRINT    "        },"
-            NEXT 
-        ELSE
-            FOR coord, 1, Px_count, 1
-                FORMAT 6.3
-                PRINT   "        { Px: ", Px(coord)
-                FORMAT 6.3 EXP
-                anax$ = "        ANAX: ["
-                id = OCOD("ANAX")
-                FOR wave, 1, waveCount, 1
-                    IF wave > 1 
-                        anax$ = anax$ + ", "
-                    ENDIF
-                    ! ANAX(void, wave, Hx, Hy, Px, Py)
-                    opval = OPEV(id,0,wave,0,Hy(field),Px(coord),0)
-                    anax$ = anax$ + $STR(opval)
-                NEXT
-                anax$ = anax$ + "]"
-                PRINT anax$
-                anay$ = "        ANAY: ["
-                id = OCOD("ANAY")
-                FOR wave, 1, waveCount, 1
-                    IF wave > 1 
-                        anay$ = anay$ + ", "
-                    ENDIF
-                    ! ANAY(void, wave, Hx, Hy, Px, Py)
-                    opval = OPEV(id,0,wave,0, Hy(field), Px(coord), 0)
-                    anay$ = anay$ + $STR(opval)
-                NEXT
-                anay$ = anay$ + "]"
-                PRINT anay$
-                PRINT "        },"
-            NEXT           
-        ENDIF
-    ELSE
-        IF FLDY(field) == 0
-        ! then Y coord is sagittal
-            FORMAT 6.3
-            PRINT "    Hx         : ", Hx(field)
-            PRINT "    aberrations: ["
-            IF afocal_im_space == 0
-                FOR coord, 1, Py_count, 1
-                    FORMAT 6.3
-                    PRINT   "        { Py: ", Py(coord)
-                    FORMAT 6.3 
-                    trax$ = "        TRAX: ["
-                    id = OCOD("TRAX")
-                    FOR wave, 1, waveCount, 1
-                        IF wave > 1 
-                            trax$ = trax$ + ", "
-                        ENDIF
-                        ! TRAX(surface, wave, Hx, Hy, Px, Py)
-                        opval = OPEV(id,surfCount,wave,Hx(field),0,0,Py(coord))
-                        trax$ = trax$ + $STR(opval)
-                    NEXT
-                    trax$ = trax$ + "]"
-                    PRINT trax$
-                    tray$ = "        TRAY: ["
                     id = OCOD("TRAY")
-                    FOR wave, 1, waveCount, 1
-                        IF wave > 1 
-                            tray$ = tray$ + ", "
-                        ENDIF
-                        ! TRAY(surface, wave, Hx, Hy, Px, Py)
-                        opval = OPEV(id,surfCount,wave,Hx(field), 0, 0, Py(coord))
-                        tray$ = tray$ + $STR(opval)
-                    NEXT
-                    tray$ = tray$ + "]"
-                    PRINT tray$
-                    PRINT "        },"
-                NEXT 
-            ELSE
-                FOR coord, 1, Py_count, 1
-                    FORMAT 6.3
-                    PRINT   "        { Py: ", Py(coord)
-                    FORMAT 6.3 EXP
-                    anax$ = "        ANAX: ["
+                    opval = OPEV(id,surfCount,wave,0,Hy(field),Px(coord),0)
+                    tray$ = tray$ + $STR(opval)
+                    ! ANAX(void, wave, Hx, Hy, Px, Py)
                     id = OCOD("ANAX")
-                    FOR wave, 1, waveCount, 1
-                        IF wave > 1 
-                            anax$ = anax$ + ", "
-                        ENDIF
-                        ! ANAX(void, wave, Hx, Hy, Px, Py)
-                        opval = OPEV(id,0,wave,Hx(field),0,0,Py(coord))
-                        anax$ = anax$ + $STR(opval)
-                    NEXT
-                    anax$ = anax$ + "]"
-                    PRINT anax$
-                    anay$ = "        ANAY: ["
+                    opval = OPEV(id,surfCount,wave,0,Hy(field),Px(coord),0)
+                    anax$ = anax$ + $STR(opval)
                     id = OCOD("ANAY")
-                    FOR wave, 1, waveCount, 1
-                        IF wave > 1 
-                            anay$ = anay$ + ", "
-                        ENDIF
-                        ! ANAY(void, wave, Hx, Hy, Px, Py)
-                        opval = OPEV(id,0,wave,Hx(coord), 0, 0, Py(coord))
-                        anay$ = anay$ + $STR(opval)
-                    NEXT
-                    anay$ = anay$ + "]"
-                    PRINT anay$
-                    PRINT "        },"
-                NEXT
+                    opval = OPEV(id,surfCount,wave,0,Hy(field),Px(coord),0)
+                    anay$ = anay$ + $STR(opval)
+                ENDIF
+            NEXT
+            trax$ = trax$ + "]"
+            tray$ = tray$ + "]"
+            anax$ = anax$ + "]"
+            anay$ = anay$ + "]"
+            IF afocal_im_space
+                PRINT anax$
+                PRINT anay$
+            ELSE
+                PRINT trax$
+                PRINT tray$
             ENDIF
+            PRINT    "        },"
         ENDIF
-    ENDIF
+    NEXT
     PRINT "    ]"
-PRINT "  },"
-LABEL 101
+    PRINT "  },"
+    LABEL 101
 NEXT
 PRINT "]"

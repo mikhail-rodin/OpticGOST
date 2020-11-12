@@ -6,7 +6,7 @@ Public Type surfData 'поверхность
     n As Double
     nShort As Double 'n для короткой длины волны
     nLong As Double 'n для большой длины волны
-    d As Double
+    D As Double
     v As Double     'коэф. Аббе
     glass As String
     diam As Double      'световой диаметр
@@ -36,20 +36,16 @@ Const firstSurfaceString As String = "OBJ"
 Const lastSurfaceString As String = "IMA"
 Const glassIndexStartString As String = "INDEX OF REFRACTION DATA:"
 Const thermalStartString As String = "THERMAL COEFFICIENT OF EXPANSION DATA:"
-
-
-
 Function FirstNotDigit(str As String) As Boolean
-    Static code As Integer
+    Dim code As Integer
     code = Asc(Mid(str, 1, 1)) 'определим по ASCII коду первого символа
     Select Case code
         Case 48 To 57: FirstNotDigit = False
         Case Else: FirstNotDigit = True
     End Select
 End Function
-
 Function LZOStranslate(glass As String) As String
-    Static temp As String
+    Dim temp As String
     If InStr(1, glass, "LZ_") Then
         temp = Replace(glass, "LZ_", "")
         temp = Replace(temp, "F", "Ф")
@@ -60,7 +56,6 @@ Function LZOStranslate(glass As String) As String
         LZOStranslate = glass
     End If
 End Function
-
 Function TableParse(row As String) As String()
 'на входе строчка таблицы из файла Zemax Prescription Data
 'на выходе динамический массив из слов в строчке
@@ -91,10 +86,9 @@ Function TableParse(row As String) As String()
 '    ReDim Preserve splitLine(6)
     TableParse = result
 End Function
-
 Function FindString(text() As String, str As String) As Integer
 'возвращает номер строки или 0 в случае ошибки
-    Static pos As Integer 'номер строки
+    Dim pos As Integer 'номер строки
     pos = 0
     Do Until pos = UBound(text) 'ищем "SURFACE DATA SUMMARY:"
         If Not InStr(text(pos), str) = 0 Then
@@ -109,11 +103,10 @@ Function FindString(text() As String, str As String) As Integer
         FindString = pos
     End If
 End Function
-
 Function FindStringBetween(text() As String, str As String, _
         ByVal searchStart As Integer, ByVal searchEnd As Integer) As Integer
     'возвращает номер строки или 0 в случае ошибки
-    Static pos As Integer 'номер строки
+    Dim pos As Integer 'номер строки
   
     For pos = searchStart To searchEnd
         If Not InStr(text(pos), str) = 0 Then
@@ -217,7 +210,7 @@ Sub zmxPrescriptionImport()
             'игнорируем её
             'и прибавляем расстояние после диафрагмы к расст. после неё
                 stopPos = surfCounter
-                surface(surfCounter - 1).d = surface(surfCounter - 1).d + Val(splitline(3))
+                surface(surfCounter - 1).D = surface(surfCounter - 1).D + Val(splitline(3))
             'не инкрементируем surfcounter
             'поэтому surface(surfCounter) в след. цикле перезапишется
             Else
@@ -245,10 +238,10 @@ Sub zmxPrescriptionImport()
                 
                 If InStr(splitline(3), "Infinity") = 0 Then
                 'если не бесконечность
-                    surface(surfCounter).d = Val(splitline(3))
+                    surface(surfCounter).D = Val(splitline(3))
                 Else
                 'записываем ноль
-                    surface(surfCounter).d = 0
+                    surface(surfCounter).D = 0
                 End If
                 
                 surface(surfCounter).glass = splitline(4)
@@ -336,17 +329,19 @@ Sub zmxPrescriptionImport()
 End Sub
 
 Public Sub rndFillTable()
-    Dim i, j As Integer
+    Dim i As Integer
+    Dim j As Integer
     Dim ZemaxStartCell As String
     Dim ESKDstartCell As String
     Dim sheetID As String
-    Dim LZOS, rndSheet As Boolean
+    Dim LZOS As Boolean
+    Dim rndSheet As Boolean
     Dim wsheet As Object
-    Static d As Double
+    Dim D As Double
     
     
-    LZOS = rndForm.LZOSchk.Value
-    rndSheet = rndForm.createSheetChk.Value
+    LZOS = rndForm.LZOSchk.value
+    rndSheet = rndForm.createSheetChk.value
     
     If rndSheet = True Then
         Set wsheet = Application.Worksheets.Add
@@ -362,29 +357,29 @@ Public Sub rndFillTable()
     
     Application.ScreenUpdating = False
     
-    If rndForm.generateZemaxTableChk.Value = True Then
+    If rndForm.generateZemaxTableChk.value = True Then
         For i = 0 To surfCounter - 1 'заносим поля из структуры в ячейки
             With wsheet
-                .Range(ZemaxStartCell).Offset(i, 0).Value = surface(i).r
-                .Range(ZemaxStartCell).Offset(i, 1).Value = surface(i).d
-                .Range(ZemaxStartCell).Offset(i, 2).Value = surface(i).n
+                .Range(ZemaxStartCell).Offset(i, 0).value = surface(i).r
+                .Range(ZemaxStartCell).Offset(i, 1).value = surface(i).D
+                .Range(ZemaxStartCell).Offset(i, 2).value = surface(i).n
             End With
             
             If surface(i).v = 0 Then 'чтобы не было нулей
-                wsheet.Range(ZemaxStartCell).Offset(i, 3).Value = ""
+                wsheet.Range(ZemaxStartCell).Offset(i, 3).value = ""
             Else
-                wsheet.Range(ZemaxStartCell).Offset(i, 3).Value = surface(i).v
+                wsheet.Range(ZemaxStartCell).Offset(i, 3).value = surface(i).v
             End If
                     
             With wsheet
-                .Range(ZemaxStartCell).Offset(i, 4).Value = surface(i).glass
-                .Range(ZemaxStartCell).Offset(i, 5).Value = surface(i).diam
-                .Range(ZemaxStartCell).Offset(i, 6).Value = surface(i).sag
+                .Range(ZemaxStartCell).Offset(i, 4).value = surface(i).glass
+                .Range(ZemaxStartCell).Offset(i, 5).value = surface(i).diam
+                .Range(ZemaxStartCell).Offset(i, 6).value = surface(i).sag
             End With
         Next i
     End If
     
-    If rndForm.generateESKDchk.Value = True Then
+    If rndForm.generateESKDchk.value = True Then
         
         With wsheet.Range(ESKDstartCell)
             .Offset(0, 2) = "ne"
@@ -402,30 +397,30 @@ Public Sub rndFillTable()
         j = 1
         For i = 1 To (surfCounter - 2) * 2 Step 2
             With wsheet.Range(ESKDstartCell)
-                If i = 1 And surface(j).d = 0 Then
+                If i = 1 And surface(j).D = 0 Then
                 'не указываем расст. до беск. удаленного предмета
                 'при импорте, если бесконечность, записывается 0
-                   .Offset(i, 1).Value = ""
+                   .Offset(i, 1).value = ""
                 Else
-                    d = surface(j).d
-                    .Offset(i, 1).Value = "d" & j - 1 & " = " & Round(d, 2)
+                    D = surface(j).D
+                    .Offset(i, 1).value = "d" & j - 1 & " = " & Round(D, 2)
                     .Offset(i, 1).Characters(2, 2).Font.Subscript = True
                 End If
 
-                .Offset(i, 2).Value = "n" & j - 1 & " = " & Round(surface(j).n, 4)
+                .Offset(i, 2).value = "n" & j - 1 & " = " & Round(surface(j).n, 4)
                 .Offset(i, 2).Characters(2, 2).Font.Subscript = True
 
                 If surface(j).v = 0 Then 'чтобы не было нулей
-                    .Offset(i, 3).Value = ""
+                    .Offset(i, 3).value = ""
                 Else
-                    .Offset(i, 3).Value = Round(surface(j).v, 2)
+                    .Offset(i, 3).value = Round(surface(j).v, 2)
                     .Offset(i, 3).NumberFormat = "0.00"
                 End If
 
                 If LZOS = True Then
-                    .Offset(i, 4).Value = LZOStranslate(surface(j).glass)
+                    .Offset(i, 4).value = LZOStranslate(surface(j).glass)
                 Else
-                    .Offset(i, 4).Value = surface(j).glass
+                    .Offset(i, 4).value = surface(j).glass
                 End If
             End With
                 j = j + 1
@@ -435,15 +430,15 @@ Public Sub rndFillTable()
         For i = 0 To (surfCounter - 2) * 2 + 1 Step 2
             With wsheet.Range(ESKDstartCell)
             If j >= 2 Then
-                 .Offset(i, 5).Value = Round(surface(j).diam, 2)
+                 .Offset(i, 5).value = Round(surface(j).diam, 2)
                  .Offset(i, 5).NumberFormat = "0.00"
                  
-                 .Offset(i, 6).Value = Round(surface(j).sag, 2)
+                 .Offset(i, 6).value = Round(surface(j).sag, 2)
                  .Offset(i, 6).NumberFormat = "0.00"
             End If
             
             If Not j = 1 Then 'радиус плоскости предмета не указываем
-                .Offset(i, 0).Value = "r" & j - 1 & " = " & Round(surface(j).r, 2)
+                .Offset(i, 0).value = "r" & j - 1 & " = " & Round(surface(j).r, 2)
                 .Offset(i, 0).Characters(2, 2).Font.Subscript = True
             End If
             End With
@@ -500,39 +495,37 @@ End Sub
 
 Public Sub CalculateSag()
 Static i As Integer
-Static d, r As Double
+Static D, r As Double
 
     For i = 0 To UBound(surface)
         If surface(i).r = 0 Then
             surface(i).sag = 0
         Else
-            d = surface(i).diam
+            D = surface(i).diam
             r = surface(i).r
             If r > 0 Then
-                surface(i).sag = r - Sqr(r ^ 2 - (d / 2) ^ 2)
+                surface(i).sag = r - Sqr(r ^ 2 - (D / 2) ^ 2)
             Else
-                surface(i).sag = r + Sqr(r ^ 2 - (d / 2) ^ 2)
+                surface(i).sag = r + Sqr(r ^ 2 - (D / 2) ^ 2)
             End If
         End If
     Next i
     
 End Sub
-
 Public Sub CleanUp()
-Erase lineArray
+    Erase lineArray
 End Sub
-
 Public Sub lensFillTable()
 
 Dim lensStartCell As String
 Dim lensSheet As Object
-Static i As Integer
+Dim i As Integer
 
     Application.ScreenUpdating = False
     
     lensStartCell = rndForm.lensStart.text
     
-    If rndForm.newLensSheetchk.Value = True Then
+    If rndForm.newLensSheetchk.value = True Then
         Set lensSheet = Application.Worksheets.Add
         lensSheet.name = rndForm.lensSheetNameBox.text
     Else
@@ -555,12 +548,12 @@ Static i As Integer
         'если мы наткнулись на линзу И это не заголовок
             elementCounter = elementCounter + 1 'посчитаем её
             With lensSheet.Range(lensStartCell)
-                .Offset(elementCounter, 0).Value = elementCounter 'номер п/п
-                .Offset(elementCounter, 1).Value = Round(surface(i).diam, 2)
-                .Offset(elementCounter, 2).Value = Round(surface(i).sag, 2)
-                .Offset(elementCounter, 3).Value = Round(surface(i + 1).diam, 2)
-                .Offset(elementCounter, 4).Value = Round(surface(i + 1).sag, 2)
-                .Offset(elementCounter, 5).Value = Round(surface(i).d, 2)
+                .Offset(elementCounter, 0).value = elementCounter 'номер п/п
+                .Offset(elementCounter, 1).value = Round(surface(i).diam, 2)
+                .Offset(elementCounter, 2).value = Round(surface(i).sag, 2)
+                .Offset(elementCounter, 3).value = Round(surface(i + 1).diam, 2)
+                .Offset(elementCounter, 4).value = Round(surface(i + 1).sag, 2)
+                .Offset(elementCounter, 5).value = Round(surface(i).D, 2)
             End With
         End If
     Next i
@@ -580,20 +573,23 @@ Static i As Integer
     Application.ScreenUpdating = True
 
 End Sub
-
 Sub LaunchRaytraceUI()
     fieldCos = 0
     rayForm.Show
 End Sub
-
 Function zmxRaytraceImport(filename As String) As Integer
     'возращает число поверхностей
     'возращает 0 при ошибке
     
-    Static surfcount, lineCount, fileID, i As Integer
-    Static position, tempPos, endPosition As Integer
-    Static Hy, Py As Double
-    Static field As Double 'определяется из Y-cosine для первой поверхности
+    Dim surfcount As Integer
+    Dim lineCount As Integer
+    Dim fileID As Integer
+    Dim i As Integer
+    Dim position As Integer
+    Dim tempPos As Integer
+    Dim endPosition As Integer
+    Dim Hy, Py As Double
+    Dim field As Double 'определяется из Y-cosine для первой поверхности
     
     Static rayType As Integer
     '1 - главный
@@ -852,24 +848,25 @@ End Sub
 
 Sub rayFillTable()
     
-Static rayStartCell, headerStartCell As String
+Dim rayStartCell As String
+Dim headerStartCell As String
 Dim raySheet As Object
-Static i, deg, min, sec As Integer
-Static halfField As Double
+Dim i As Integer
+Dim deg As Integer
+Dim min As Integer
+Dim sec As Integer
+Dim halfField As Double
 
 halfField = ArcSin(fieldCos) * 180 / 3.1415926
 deg = Fix(halfField)
 min = Int((Abs(halfField - deg)) * 60) '>0
 sec = Int(((Abs(halfField - deg)) * 60 _
         - Int((Abs(halfField - deg)) * 60)) * 60)
-
-    Application.ScreenUpdating = False
-    
-    
+        
+Application.ScreenUpdating = False
         'rayStartCell = rayForm.startCell.text
-    
     With rayForm
-        If .createSheetChk.Value = True Then
+        If .createSheetChk.value = True Then
             Set raySheet = Application.Worksheets.Add
             On Error Resume Next
             raySheet.name = .sheetName.text
@@ -882,7 +879,7 @@ sec = Int(((Abs(halfField - deg)) * 60 _
             .sheetName.text = raySheet.name
         End If
         
-        If .headerChk.Value = True Then
+        If .headerChk.value = True Then
             headerStartCell = .startCell.text
             rayStartCell = raySheet.Range(headerStartCell).Offset(3, 0).Address
             raySheet.Range(headerStartCell).Resize(3 + UBound(rays), 5).UnMerge
@@ -892,35 +889,38 @@ sec = Int(((Abs(halfField - deg)) * 60 _
                 
                 With .Offset(0, 1)
                     .Resize(1, 4).Merge
-                    .MergeArea.Value = "Высоты, мм"
+                    .MergeArea.value = "Высоты, мм"
                     .HorizontalAlignment = xlCenter
                 End With
                 
                 With .Offset(1, 1)
                     .Resize(2, 1).Merge
-                    .MergeArea.Value = "Осевой луч"
+                    .MergeArea.value = "Осевой луч"
                     .HorizontalAlignment = xlCenter
                     .WrapText = True
+                    .MergeArea.Columns.AutoFit
                 End With
                 
                 With .Offset(1, 2)
                     .Resize(1, 3).Merge
-                    .MergeArea.Value = "Наклонный луч " _
+                    .MergeArea.value = "Наклонный луч " _
                         & ChrW(969) & " = " & deg & ChrW(176) & min & "'" & sec & "''"
                     .HorizontalAlignment = xlCenter
                 End With
                 
-                .Offset(2, 2).Value = "Нижний"
-                .Offset(2, 3).Value = "Главный"
-                .Offset(2, 4).Value = "Верхний"
+                .Offset(2, 2).value = "Нижний"
+                .Offset(2, 3).value = "Главный"
+                .Offset(2, 4).value = "Верхний"
                 
                 .Resize(3, 1).Merge
-                .MergeArea.Value = "Номер поверхности"
+                .MergeArea.value = "Номер поверхности"
                 .HorizontalAlignment = xlCenter
                 .WrapText = True
+                '.MergeArea.Columns.Width
                 
                 .Offset(0, 1).Resize(3 + UBound(rays), 4).NumberFormat = "0.00"
                 .Resize(3 + UBound(rays), 1).NumberFormat = "0"
+                .Resize(3 + UBound(rays), 5).HorizontalAlignment = xlCenter
             End With
         Else
             rayStartCell = .startCell.text
@@ -934,20 +934,16 @@ sec = Int(((Abs(halfField - deg)) * 60 _
     
     For i = 1 To UBound(rays)
         With raySheet.Range(rayStartCell)
-            .Offset(i - 1, 0).Value = i 'номер п/п
-            .Offset(i - 1, 1).Value = Round(Val(rays(i).axialRayH), 2)
-            .Offset(i - 1, 2).Value = Round(Val(rays(i).lowerRayH), 2)
-            .Offset(i - 1, 3).Value = Round(Val(rays(i).chiefRayH), 2)
-            .Offset(i - 1, 4).Value = Round(Val(rays(i).upperRayH), 2)
+            .Offset(i - 1, 0).value = i 'номер п/п
+            .Offset(i - 1, 1).value = Round(Val(rays(i).axialRayH), 2)
+            .Offset(i - 1, 2).value = Round(Val(rays(i).lowerRayH), 2)
+            .Offset(i - 1, 3).value = Round(Val(rays(i).chiefRayH), 2)
+            .Offset(i - 1, 4).value = Round(Val(rays(i).upperRayH), 2)
         End With
     Next i
     
-    
-    
     Application.ScreenUpdating = True
-
 End Sub
-
 Public Function ArcCos(A As Double) As Double 'в радианах
   'Inverse Cosine
     On Error Resume Next
@@ -958,7 +954,6 @@ Public Function ArcCos(A As Double) As Double 'в радианах
         ArcCos = Atn(-A / Sqr(-A * A + 1)) + 2 * Atn(1)
     On Error GoTo 0
 End Function
-
 Public Function ArcSin(ByVal x As Double) As Double 'в радианах
     If x = 1 Then
         ArcSin = 0
@@ -967,4 +962,3 @@ Public Function ArcSin(ByVal x As Double) As Double 'в радианах
         ArcSin = Atn(x / Sqr(-x * x + 1))
     End If
 End Function
-
