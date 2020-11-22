@@ -330,7 +330,12 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
         Py_coord_count = Int(.Item("Py_coord_count"))
         
         .Item("afocal") = CBool(.Item("afocal"))
+        .Item("telecentric_obj_space") = CBool(.Item("telecentric_obj_space"))
         .Item("wavelengths") = CDblArr(delEmptyLines(parseArray(.Item("wavelengths"))))
+        .Item("angular_magnification") = Val(.Item("angular_magnification"))
+        .Item("paraxial_magnification") = Val(.Item("paraxial_magnification"))
+        .Item("total_track") = Val(.Item("total_track"))
+        .Item("EFFL") = Val(.Item("EFFL"))
         
         Dim fieldDict As Scripting.Dictionary
         Dim fieldDicts As Collection
@@ -407,8 +412,8 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
                 .Item("x_field") = Val(.Item("x_field"))
                 .Item("y_field") = Val(.Item("y_field"))
                 .Item("vignetting_angle") = Val(.Item("vignetting_angle"))
-                .Item("vignetting_compession_x") = Val(.Item("vignetting_compession_x"))
-                .Item("vignetting_compession_x") = Val(.Item("vignetting_compession_x"))
+                .Item("vignetting_compression_x") = Val(.Item("vignetting_compression_x"))
+                .Item("vignetting_compression_y") = Val(.Item("vignetting_compression_y"))
                 .Item("vignetting_decenter_x") = Val(.Item("vignetting_decenter_x"))
                 .Item("vignetting_decenter_y") = Val(.Item("vignetting_decenter_y"))
             End With
@@ -483,6 +488,11 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
             Set axialDict = New Scripting.Dictionary
             Set axialDict = parseOneLevel(withoutOuterBrackets(axialObjUnparsed))
             With axialDict
+                .Item("entr_RANG") = CDblArr(delEmptyLines(parseArray(.Item("entr_RANG"))))
+                .Item("exit_RANG") = CDblArr(delEmptyLines(parseArray(.Item("exit_RANG"))))
+                .Item("h_1") = CDblArr(delEmptyLines(parseArray(.Item("h_1"))))
+                .Item("h_q") = CDblArr(delEmptyLines(parseArray(.Item("h_q"))))
+                'now we'll parse values specific for an X plane
                 .Item("Px") = Val(.Item("Px"))
                 .Item("OSCD") = Val(.Item("OSCD"))
                 .Item("TRAX") = CDblArr(delEmptyLines(parseArray(.Item("TRAX"))))
@@ -500,6 +510,11 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
             Set axialDict = New Scripting.Dictionary
             Set axialDict = parseOneLevel(withoutOuterBrackets(axialObjUnparsed))
             With axialDict
+                .Item("entr_RANG") = CDblArr(delEmptyLines(parseArray(.Item("entr_RANG"))))
+                .Item("exit_RANG") = CDblArr(delEmptyLines(parseArray(.Item("exit_RANG"))))
+                .Item("h_1") = CDblArr(delEmptyLines(parseArray(.Item("h_1"))))
+                .Item("h_q") = CDblArr(delEmptyLines(parseArray(.Item("h_q"))))
+                'now we'll parse values specific for a Y plane
                 .Item("Py") = Val(.Item("Py"))
                 .Item("OSCD") = Val(.Item("OSCD"))
                 .Item("TRAY") = CDblArr(delEmptyLines(parseArray(.Item("TRAY"))))

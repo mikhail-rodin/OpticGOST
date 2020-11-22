@@ -44,19 +44,23 @@ Public Function angDeg(degrees As Double) As Integer
     angDeg = Fix(degrees)
 End Function
 Public Function angMin(degrees As Double) As Integer
-    Dim deg As Double
-    deg = Fix(degrees)
-    angMin = Int((Abs(degrees - deg)) * 60)
+    Dim Deg As Double
+    Deg = Fix(degrees)
+    angMin = Int((Abs(degrees - Deg)) * 60)
 End Function
 Public Function angSec(degrees As Double) As Integer
-    Dim deg As Double
-    deg = Fix(degrees)
-    angSec = Int(((Abs(degrees - deg)) * 60 - Int((Abs(degrees - deg)) * 60)) * 60)
+    Dim Deg As Double
+    Deg = Fix(degrees)
+    angSec = Int(((Abs(degrees - Deg)) * 60 - Int((Abs(degrees - Deg)) * 60)) * 60)
 End Function
 Public Function degMinSec(degrees As Double) As String
     degMinSec = CStr(angDeg(degrees)) & ChrW(176) & CStr(angMin(degrees)) & "'" & CStr(angSec(degrees)) & "''"
 End Function
-Public Function Rad(deg As Double) As Double
+Public Function rad(Deg As Double) As Double
     Const Pi As Double = 3.1415927
-    Rad = deg * Pi / 180
+    rad = Deg * Pi / 180
+End Function
+Public Function Deg(rad As Double) As Double
+    Const Pi As Double = 3.1415927
+    Deg = rad * 180 / Pi
 End Function

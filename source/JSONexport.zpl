@@ -204,6 +204,10 @@ id = OCOD("EXPP")
 exitPupilPos = OPEV(id, 0,0,0,0,0,0)
 
 surfCount = NSUR()
+! surface numbers of first and last lens surfaces
+firstSurf = 1
+lastSurf = surfCount -1
+imageSurf = surfCount
 
 PRINT "# hjson format" 
 
@@ -347,11 +351,13 @@ FOR coord, 1, Py_count, 1
         FORMAT 5.4
         PRINT "  Px: ", Py(coord) 
         ! not a typo: Py coords are taken as tangential
-        trax$ = ""
-        lona$ = ""
-        anax$ = ""
-        entr_rang$ = ""
-        exit_rang$ = ""
+        trax$ =      "  TRAX     : ["
+        lona$ =      "  LONA     : ["
+        anax$ =      "  ANAX     : ["
+        entr_rang$ = "  entr_RANG: ["
+        exit_rang$ = "  exit_RANG: ["
+        h_1$ =       "  h_1      : ["
+        h_q$ =       "  h_q      : ["
         FOR wave, 1, waveCount, 1
             FORMAT 6.3 EXP
             IF wave > 1 
@@ -360,6 +366,8 @@ FOR coord, 1, Py_count, 1
                 lona$ = lona$ + ", "
                 entr_rang$ = entr_rang$ + ", "
                 exit_rang$ = exit_rang$ + ", "
+                h_1$ = h_1$ + ","
+                h_q$ = h_q$ + ","
             ENDIF
             id = OCOD("ANAX")
             ! ANAY(void, wave, Hx, Hy, Px, Py)
@@ -372,14 +380,19 @@ FOR coord, 1, Py_count, 1
             lona$ = lona$ + $STR(OPEV(id, wave, 0, Py(coord), 0, 0, 0)) 
             ! RANG(surface, wave, Hx, Hy, Px, Py)
             id = OCOD("RANG")
-            entr_rang$ = entr_rang$ + $STR(OPEV(id,0,wave,0,0,Py(coord),0))
-            exit_rang$ = exit_rang$ + $STR(OPEV(id,surfCount,wave,0,0,Py(coord),0))
+            entr_rang$ = entr_rang$ + $STR(OPEV(id,firstSurf,wave,0,0,Py(coord),0))
+            exit_rang$ = exit_rang$ + $STR(OPEV(id,lastSurf,wave,0,0,Py(coord),0))
+            id = OCOD("REAX")
+            h_1$ = h_1$ + $STR(OPEV(id,firstSurf,wave,0,0,Py(coord),0))
+            h_q$ = h_q$ + $STR(OPEV(id,lastSurf,wave,0,0,Py(coord),0))
         NEXT
-        lona$ = "  LONA: [" + lona$ + "]"
-        entr_rang$ = "  entr_RANG: [" + entr_rang$ + "]"
-        exit_rang$ = "  exit_RANG: [" + exit_rang$ + "]"
-        anax$ = "  ANAX: [" + anax$ + "]"
-        trax$ = "  TRAX: [" + trax$ + "]"
+        lona$ =  lona$ + "]"
+        entr_rang$ =  entr_rang$ + "]"
+        exit_rang$ =  + exit_rang$ + "]"
+        anax$ =  + anax$ + "]"
+        trax$ =  + trax$ + "]"
+        h_1$ = h_1$ + "]"
+        h_q$ = h_q$ + "]"
         PRINT lona$
         PRINT entr_rang$
         PRINT exit_rang$
@@ -388,6 +401,8 @@ FOR coord, 1, Py_count, 1
         ELSE
             PRINT trax$
         ENDIF
+        PRINT h_1$
+        PRINT h_q$
         id = OCOD("OSCD")
         ! OSCD(surface, wave, zone)
         PRINT "  OSCD: ", OPEV(id, 0, primaryWave, Py(i), 0, 0, 0)
@@ -396,50 +411,67 @@ FOR coord, 1, Py_count, 1
 NEXT
 PRINT "]"
 PRINT "axial_y: ["
-FOR j, 1, Py_count, 1
-    IF Py(j) >= 0
+FOR coord, 1, Py_count, 1
+    IF Py(coord) >= 0 
         PRINT "  {"
         FORMAT 5.4
-        PRINT "  Py: ", Py(j)
-        tray$ = ""
-        lona$ = ""
-        anay$ = ""
-        FOR k, 1, waveCount, 1
+        PRINT "  Py: ", Py(coord) 
+        ! not a typo: Py coords are taken as tangential
+        tray$ =      "  TRAY     : ["
+        lona$ =      "  LONA     : ["
+        anay$ =      "  ANAY     : ["
+        entr_rang$ = "  entr_RANG: ["
+        exit_rang$ = "  exit_RANG: ["
+        h_1$ =       "  h_1      : ["
+        h_q$ =       "  h_q      : ["
+        FOR wave, 1, waveCount, 1
             FORMAT 6.3 EXP
-            IF afocal_im_space
-                IF k > 1 
-                    anay$ = anay$ + ", "
-                ENDIF
-                id = OCOD("ANAY")
-                ! ANAY(void, wave, Hx, Hy, Px, Py)
-                anay$ = anay$ + $STR(OPEV(id, 0, k, 0, 0, 0, Py(j)))
-            ELSE
-                IF k > 1 
-                    tray$ = tray$ + ", "
-                ENDIF
-                id = OCOD("TRAY")
-                ! TRAY(surface, wave, Hx, Hy, Px, Py)
-                tray$ = tray$ + $STR(OPEV(id, 0, k, 0, 0, 0, Py(j)))
-            ENDIF
-            IF k > 1 
+            IF wave > 1 
+                anay$ = anay$ + ", "
+                tray$ = tray$ + ", "
                 lona$ = lona$ + ", "
+                entr_rang$ = entr_rang$ + ", "
+                exit_rang$ = exit_rang$ + ", "
+                h_1$ = h_1$ + ","
+                h_q$ = h_q$ + ","
             ENDIF
+            id = OCOD("ANAY")
+            ! ANAY(void, wave, Hx, Hy, Px, Py)
+            anay$ = anay$ + $STR(OPEV(id, 0, wave, 0, 0, 0, Py(coord)))
+            id = OCOD("TRAY")
+            ! TRAY(surface, wave, Hx, Hy, Px, Py)
+            tray$ = tray$ + $STR(OPEV(id, 0, wave, 0, 0, 0, Py(coord))) 
             id = OCOD("LONA")
             ! LONA(wave, void, zone)
-            lona$ = lona$ + $STR(OPEV(id, k, 0, Py(j), 0, 0, 0)) 
+            lona$ = lona$ + $STR(OPEV(id, wave, 0,Py(coord), 0, 0, 0)) 
+            ! RANG(surface, wave, Hx, Hy, Px, Py)
+            id = OCOD("RANG")
+            entr_rang$ = entr_rang$ + $STR(OPEV(id,firstSurf,wave,0,0,0,Py(coord)))
+            exit_rang$ = exit_rang$ + $STR(OPEV(id,lastSurf,wave,0,0,0,Py(coord)))
+            id = OCOD("REAY")
+            h_1$ = h_1$ + $STR(OPEV(id,firstSurf,wave,0,0,0,Py(coord)))
+            h_q$ = h_q$ + $STR(OPEV(id,lastSurf,wave,0,0,0,Py(coord)))
         NEXT
-        str$ = "  LONA: [" + lona$ + "]"
-        PRINT str$
+        lona$ =  lona$ + "]"
+        entr_rang$ =  entr_rang$ + "]"
+        exit_rang$ =  + exit_rang$ + "]"
+        anay$ =  + anay$ + "]"
+        tray$ =  + tray$ + "]"
+        h_1$ = h_1$ + "]"
+        h_q$ = h_q$ + "]"
+        PRINT lona$
+        PRINT entr_rang$
+        PRINT exit_rang$
         IF afocal_im_space
-            str$ = "  ANAY: [" + anay$ + "]"
-            PRINT str$
+            PRINT anay$
         ELSE
-            str$ = "  TRAY: [" + tray$ + "]"
-            PRINT str$
+            PRINT tray$
         ENDIF
+        PRINT h_1$
+        PRINT h_q$
         id = OCOD("OSCD")
         ! OSCD(surface, wave, zone)
-        PRINT "  OSCD: ", OPEV(id, 0, primaryWave, Py(j), 0, 0, 0)
+        PRINT "  OSCD: ", OPEV(id, 0, primaryWave, Py(i), 0, 0, 0)
         PRINT "  },"
     ENDIF
 NEXT
@@ -463,19 +495,21 @@ FOR field, 1, fieldCount, 1
         GOTO 101
         ! next field w/o closing bracket
     ENDIF
-    Hx(field) = FLDX(field)/maxField
-    Hy(field) = FLDY(field)/maxField
+    ! clockwise (positive) field angles are negative in Zemax
+    ! so positive fields correspond to negative H coords
+    Hx(field) = -FLDX(field)/maxField
+    Hy(field) = -FLDY(field)/maxField
     PRINT "  {"
     FORMAT 2 INT
     PRINT "    no                     : ", field
     FORMAT 6.3
     PRINT "    Hx                     : ", Hx(field)
     PRINT "    Hy                     : ", Hy(field)
-    PRINT "    x_field                : ", FLDX(field)
-    PRINT "    y_field                : ", FLDY(field)
+    PRINT "    x_field                : ", -FLDX(field)
+    PRINT "    y_field                : ", -FLDY(field)
     PRINT "    vignetting_angle       : ", FVAN(field)
-    PRINT "    vignetting_compession_x: ", FVCX(field)
-    PRINT "    vignetting_compession_y: ", FVCY(field)
+    PRINT "    vignetting_compression_x: ", FVCX(field)
+    PRINT "    vignetting_compression_y: ", FVCY(field)
     PRINT "    vignetting_decenter_x  : ", FVDX(field)
     PRINT "    vignetting_decenter_y  : ", FVDY(field)
     ! chief ray aberrations
@@ -498,10 +532,8 @@ FOR field, 1, fieldCount, 1
         ! 4. chief ray height at 1st surface
         ! and for finite object space we also need image height. That's all.
         id = OCOD("RANG")
-        opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
-        rang$ = rang$ + $STR(opval) 
-        opval = OPEV(id, 1, wave, Hx(field), Hy(field), 0, 0)
-        entr_rang$ = entr_rang$ + $STR(opval) 
+        rang$ = rang$ + $STR(OPEV(id, lastSurf, wave, Hx(field), Hy(field), 0, 0)) 
+        entr_rang$ = entr_rang$ + $STR(OPEV(id, firstSurf, wave, Hx(field), Hy(field), 0, 0)) 
         IF FLDX(field) == 0
             id = OCOD("REAY")
         ELSE
@@ -513,10 +545,8 @@ FOR field, 1, fieldCount, 1
                 ! 101 = next field
             ENDIF
         ENDIF
-        opval = OPEV(id, 1, wave, Hx(field), Hy(field), 0, 0)
-        h_1$ = h_1$ + $STR(opval) 
-        opval = OPEV(id, surfCount-1, wave, Hx(field), Hy(field), 0, 0)
-        h_q$ = h_q$ + $STR(opval) 
+        h_1$ = h_1$ + $STR(OPEV(id, 1, wave, Hx(field), Hy(field), 0, 0)) 
+        h_q$ = h_q$ + $STR(OPEV(id,lastSurf, wave, Hx(field), Hy(field), 0, 0)) 
     NEXT
     rang$ = rang$ + "]"
     entr_rang$ = entr_rang$ + "]"
@@ -538,11 +568,9 @@ FOR field, 1, fieldCount, 1
             ENDIF
             ! REAX(surface, wave, Hx, Hy, Px, Py)
             id = OCOD("REAX")
-            opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
-            reax$ = reax$ + $STR(opval) 
+            reax$ = reax$ + $STR(OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)) 
             id = OCOD("REAY")
-            opval = OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)
-            reay$ = reay$ + $STR(opval) 
+            reay$ = reay$ + $STR(OPEV(id, surfCount, wave, Hx(field), Hy(field), 0, 0)) 
         NEXT
         reax$ = reax$ + "]"
         reay$ = reay$ + "]"
