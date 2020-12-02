@@ -7,25 +7,28 @@ def is_number(s):
         return True
     except ValueError:
         return False
+def mrad_to_min(mrad):
+    return (mrad/1000)*180*60/3.1415927
 
 plot_types={
     # name:(x_column, y_label,x_label,x_label_afocal, label)
     "lon": (1, r"$-m'$",             r"$\Delta s'$, мм", r"$\Delta s'$, дптр", u"Продольная сферическая аберрация"),
     "sph": (1, r"$m'-m_{гл}$, мм",   r"$\Delta y'$, мм",   r"$\sigma'$, мин", u"Поперечная сферическая аберрация"),
     "tang":(1, r"$m'-m_{гл}$, мм",   r"$\Delta y'$, мм",   r"$\sigma'$, мин", u"Меридиональное сечение"),
-    "sag": (1, r"$M'$, мм",   r"$\Delta x'$, мм",   r"$\\psi'$, мин", u"Сагиттальное сечение"),
-    "cfs": (1, r"$-\omega'$, град", r"$\Delta s'$, мм",   r"$\Delta s'$, дптр", u"Хроматизм положения"),
+    "sag": (1, r"$M'$, мм",   r"$\Delta x'$, мм",   r"$\psi'$, мин", u"Сагиттальное сечение"),
+    "cfs": (1, r"$\lambda$, мкм", r"$\Delta s'$, мм",   r"$\Delta s'$, дптр", u"Хроматизм положения"),
     "dist":(1, r"$-\omega'$, град", r"$\Delta y'$, мм",   r"$\Delta\omega', \%", u"Дисторсия"),
     "ast": (1, r"$-\omega'$, град", r"$L'$, мм",r"$L'cos\omega'$, дптр", u"Астигматизм"),
 }
-
 preamble=[
     '\\documentclass{article}\n',
+    '\\usepackage{mathtext}\n',
     '\\usepackage{tikz}\n',
     '\\usepackage{pgfplots}\n',
     '\\usepackage[utf8]{inputenc}\n',
     '\\usepackage[english,russian]{babel}\n',
     '\\begin{document}\n',
+    '\\thispagestyle{empty}\n',
     '\\begin{tikzpicture}\n',
     '\t\\begin{axis}[\n',
     '\t\taxis lines=middle,\n',
@@ -46,7 +49,6 @@ postfix=[
     '\\end{tikzpicture}\n',
     '\\end{document}\n'
 ]
-
 spectral_lines=[
     (759.37,"А"),
     (686.719,"B"),
@@ -145,15 +147,19 @@ for line in report:
     if is_number(words[0]):
         if not ((plottype=="sag" and not is_sagittal) or (plottype=="tang" and is_sagittal)):
             x=[] #list of x coords in case there are more than one
-            y=abs(float(words[0]))
+            y=float(words[0])
+            if not (plottype=='tang' or plottype=='sag'):
+                y=abs(y)
             if plottype=='lon':
                 for i,wvl in enumerate(waves):
                     x.append(float(words[x_column_index+i]))
             elif plottype=='ast':
                 x.append(float(words[x_column_index]))
                 x.append(float(words[x_column_index+1]))
+            elif args.afocal and (plottype=='tang' or plottype=='sag'):
+                x.append(mrad_to_min(float(words[x_column_index])))
             else:
-                x=float(words[x_column_index])
+                x.append(float(words[x_column_index]))
             coords.append([y,x])
     else:
         if line.find("Sagittal fan") > -1:
@@ -174,7 +180,7 @@ for col in range(0,len(coords[0][1])):
         x=coord[1][col]
         y=coord[0]
         table.append((x,y))
-    fname_csv=f'{fname.replace("_","")}wave{col}.csv'
+    fname_csv=f'{fname.replace("_","")}wave{col}{plottype[0]}.csv'
     csv_files.append(fname_csv)
     fpath_csv=os.path.join(outdir,fname_csv)
     with open(fpath_csv, "w") as csvfile:
@@ -199,21 +205,25 @@ elif plottype=='ast':
         plot_labels.append("$L'_m$")
         plot_labels.append("$L'_s$")
 
-ytick='0.7,1'
-yticklabels=f'{round(args.yscale*0.7,1)},{args.yscale}'
-#these are modified only for pupil coords
-#for field and wavelength ticks are extracted from CSV
+if plottype=='cfs':
+    ytick=''
+    for wave in waves:
+        ytick+=str(wave)
+else:
+    ytick='0.7,1'
+    yticklabels=f'{round(args.yscale*0.7,1)},{args.yscale}'
 
-fname_tex = fname.replace("_","")+".tex"
+fname_tex = fname.replace("_","")+plottype[0].capitalize()+".tex"
 fpath_tex = os.path.join(outdir, fname_tex)
 with open(fpath_tex,'w', encoding='utf-8') as texfile:
     texfile.writelines(preamble)
     #texfile.write('\t\ttitle={' + label + '},\n')
     texfile.write('\t\txlabel={' + x_label + '},\n')
     texfile.write('\t\tylabel={' + y_label + '},\n')
-    if not (plottype=='ast' or plottype=='dist' or plottype=='cfs'):
+    if not (plottype=='ast' or plottype=='dist'):
         texfile.write('\t\tytick={'+ytick+'},\n')
-        texfile.write('\t\tyticklabels={'+yticklabels+'},\n')
+        if not plottype=='cfs':
+            texfile.write('\t\tyticklabels={'+yticklabels+'},\n')
     texfile.write('\t\t]\n')
     for i,csv_name in enumerate(csv_files):
         label=''
