@@ -1,5 +1,6 @@
 import argparse
 import os.path
+from math import sqrt
 
 def is_number(s):
     try:
@@ -17,7 +18,7 @@ plot_types={
     "tang":(1, r"$m'-m_{гл}$, мм",   r"$\Delta y'$, мм",   r"$\sigma'$, мин", u"Меридиональное сечение"),
     "sag": (1, r"$M'$, мм",   r"$\Delta x'$, мм",   r"$\psi'$, мин", u"Сагиттальное сечение"),
     "cfs": (1, r"$\lambda$, мкм", r"$\Delta s'$, мм",   r"$\Delta s'$, дптр", u"Хроматизм положения"),
-    "dist":(1, r"$-\omega'$, град", r"$\Delta y'$, мм",   r"$\Delta\omega', \%", u"Дисторсия"),
+    "dist":(5, r"$-\omega'$, град", r"$\Delta y'$, мм",   r"$\Delta\omega'$, \%", u"Дисторсия"),
     "ast": (1, r"$-\omega'$, град", r"$L'$, мм",r"$L'cos\omega'$, дптр", u"Астигматизм"),
 }
 preamble=[
@@ -95,7 +96,7 @@ ap.add_argument(
     dest='type', 
     required=True, 
     type=str, 
-    choices=["tang", "sag", "lon", "cfs", "ast","sph"], 
+    choices=["tang", "sag", "lon", "cfs", "ast","sph", "dist"], 
     help='type of plot'
 )
 ap.add_argument(
@@ -108,6 +109,7 @@ ap.add_argument(
 )
 ap.add_argument(
     "--yscale", 
+    "-y",
     dest='yscale', 
     type=float,
     required=False, 
@@ -116,6 +118,7 @@ ap.add_argument(
 )
 ap.add_argument(
     "--enc",
+    "-e",
     required=False,
     type=str,
     dest="enc",
@@ -145,17 +148,21 @@ for line in report:
     if len(words)==0:
         continue
     if is_number(words[0]):
-        if not ((plottype=="sag" and not is_sagittal) or (plottype=="tang" and is_sagittal)):
+        if not ((plottype=="sag" and not is_sagittal) or ((plottype=="tang" or plottype=='sph') and is_sagittal)):
             x=[] #list of x coords in case there are more than one
             y=float(words[0])
-            if not (plottype=='tang' or plottype=='sag'):
+            if not (plottype=='tang' or plottype=='sag' or plottype=='sph'):
                 y=abs(y)
             if plottype=='lon':
                 for i,wvl in enumerate(waves):
                     x.append(float(words[x_column_index+i]))
             elif plottype=='ast':
-                x.append(float(words[x_column_index]))
-                x.append(float(words[x_column_index+1]))
+                L_m=float(words[x_column_index])
+                L_s=float(words[x_column_index+1])
+                real_dir_cos = float(words[3])
+                field_cos = sqrt(1-real_dir_cos**2)
+                x.append(L_m*field_cos)
+                x.append(L_s*field_cos)
             elif args.afocal and (plottype=='tang' or plottype=='sag'):
                 x.append(mrad_to_min(float(words[x_column_index])))
             else:
