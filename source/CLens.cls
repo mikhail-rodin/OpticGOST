@@ -409,7 +409,7 @@ Private Function sineCondErrorY(axialYCoord As Integer) As Double
         m = Me.m_exit_AxialY(axialYCoord)
         apertureAng = Me.axialXOpVal("exit_RANG", 1, axialYCoord)
         If apertureAng < eps Then
-            f_real = 0
+            f_real = f_parax
         Else
             f_real = m / Sin(apertureAng)
         End If
