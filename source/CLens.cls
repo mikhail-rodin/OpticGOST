@@ -407,8 +407,12 @@ Private Function sineCondErrorY(axialYCoord As Integer) As Double
         Dim m As Double, apertureAng As Double
         f_parax = This.mainDict.Item("EFFL")
         m = Me.m_exit_AxialY(axialYCoord)
-        apertureAng = Me.axialXOpVal("RANG", 1, axialYCoord)
-        f_real = m / Sin(apertureAng)
+        apertureAng = Me.axialXOpVal("exit_RANG", 1, axialYCoord)
+        If apertureAng < eps Then
+            f_real = 0
+        Else
+            f_real = m / Sin(apertureAng)
+        End If
         sineCondErrorY = (f_real - f_parax) / f_parax
     End If
 End Function
