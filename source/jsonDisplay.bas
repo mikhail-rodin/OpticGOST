@@ -582,6 +582,10 @@ Private Function printAxial(startCell As Excel.Range, ByRef lens As CLens) As In
                         .MergeArea.value = uINCR & "s, мм"
                     End If
                     .VerticalAlignment = xlCenter
+                    For coord = 1 To lens.axialYCoordCount
+                        .Offset(coord, 0).value _
+                            = Round(lens.axialYOpVal("LONA", 1, coord), 4)
+                    Next coord
                 End With
                 With .Offset(0, 3)
                     .Resize(2, 1).Merge
@@ -591,11 +595,23 @@ Private Function printAxial(startCell As Excel.Range, ByRef lens As CLens) As In
                         .MergeArea.value = uSIGMA & "', мм"
                     End If
                     .VerticalAlignment = xlCenter
+                    For coord = 1 To lens.axialYCoordCount
+                        If lens.afocal Then
+                            .Offset(coord, 0).value = tools.degMinSec( _
+                                tools.Deg(lens.axialYOpVal("ANAY", 1, coord)))
+                        Else
+                            .Offset(coord, 0).value = _
+                                Round(lens.axialYOpVal("TRAY", 1, coord), 4)
+                        End If
+                    Next coord
                 End With
                 With .Offset(0, 4)
                     .Resize(2, 1).Merge
                     .MergeArea.value = "Неизопланатизм " & uETA & ", %"
                     .VerticalAlignment = xlCenter
+                    For coord = 1 To lens.axialYCoordCount
+                        .Offset(coord, 0).value = Round(lens.isoplanaticErrorY(coord), 4)
+                    Next coord
                 End With
             Case 3 To 5:
                 With .Offset(0, 2)
