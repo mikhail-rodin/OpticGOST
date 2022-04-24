@@ -106,9 +106,35 @@ Property Get tangOpVal(opName As String, selField As Integer, selWave As Integer
     tangOpVal = This.mainDict.Item("fields")(This.selectedFields(selField)) _
         .Item("tangential")(coord).Item(opName)(This.selectedWaves(selWave) - 1)
 End Property
+Property Get tgSigmaImTang(selField As Integer, selWave As Integer, coord As Integer) As Double
+'tg(sigma), where sigma is angle of oblique ray (chief, rim or in between)
+' coming out of exit pupil into the off-axis image point
+    Dim M As Double, N As Double
+    M = This.mainDict.Item("fields")(This.selectedFields(selField)) _
+        .Item("tangential")(coord).Item("RAGB")(This.selectedWaves(selWave) - 1)
+    'L^2 + M^2 + N^1 = 1, L=RAGA=0 => N^2 = 1 - M^2
+    N = Sqr(1 - M ^ 2)
+    tgSigmaImTang = Tan(M / N)
+End Property
+Property Get tgChiefRayAngle(selField As Integer, selWave As Integer) As Double
+    Dim M As Double, N As Double
+    M = Me.chiefOpVal("RAGB", selWave, selField)
+    N = Sqr(1 - M ^ 2) 'as L=0
+    tgChiefRayAngle = Tan(M / N)
+End Property
 Property Get sagOpVal(opName As String, selField As Integer, selWave As Integer, coord As Integer) As Double
     sagOpVal = This.mainDict.Item("fields")(This.selectedFields(selField)) _
         .Item("sagittal")(coord).Item(opName)(This.selectedWaves(selWave) - 1)
+End Property
+Property Get raytraceOpVal(opName As String, surf As Integer, selWave As Integer) As hjsonParse.TRayVec
+    raytraceOpVal.axial_y = This.mainDict.Item("surfaces")(surf) _
+        .Item("axial_y").Item(opName)(This.selectedWaves(selWave) - 1)
+    raytraceOpVal.chief_y = This.mainDict.Item("surfaces")(surf) _
+        .Item("chief_y").Item(opName)(This.selectedWaves(selWave) - 1)
+    raytraceOpVal.upper_y = This.mainDict.Item("surfaces")(surf) _
+        .Item("upper_y").Item(opName)(This.selectedWaves(selWave) - 1)
+    raytraceOpVal.lower_y = This.mainDict.Item("surfaces")(surf) _
+        .Item("lower_y").Item(opName)(This.selectedWaves(selWave) - 1)
 End Property
 Property Get axialXOpVal(opName As String, selWave As Integer, coord As Integer) As Double
     axialXOpVal = This.mainDict.Item("axial_x")(coord) _
@@ -227,11 +253,11 @@ End Property
 Private Function findLastSurf() As Integer
 'returns number of last lens surface
     Dim surf As Integer, lastSurf As Integer
-    Dim n As Integer
+    Dim N As Integer
     Const eps As Integer = 0.01
     For surf = 1 To This.surfaceCount
-        n = This.mainDict.Item("surfaces")(surf).Item("index@d")
-        If Abs(n - 1) > eps Then
+        N = This.mainDict.Item("surfaces")(surf).Item("index@d")
+        If Abs(N - 1) > eps Then
         'if it's glass
             lastSurf = surf + 1
         End If
@@ -404,14 +430,14 @@ Private Function sineCondErrorY(axialYCoord As Integer) As Double
     Else
     'or if it's not afocal we'll calculate focal plane shift
         Dim f_parax As Double, f_real As Double
-        Dim m As Double, apertureAng As Double
+        Dim M As Double, apertureAng As Double
         f_parax = This.mainDict.Item("EFFL")
-        m = Me.m_exit_AxialY(axialYCoord)
+        M = Me.m_exit_AxialY(axialYCoord)
         apertureAng = Me.axialXOpVal("exit_RANG", 1, axialYCoord)
         If apertureAng < eps Then
             f_real = f_parax
         Else
-            f_real = m / Sin(apertureAng)
+            f_real = M / Sin(apertureAng)
         End If
         sineCondErrorY = (f_real - f_parax) / f_parax
     End If

@@ -493,6 +493,7 @@ FORMAT 6.3
 str$ = "max_field: " + $STR(maxField)
 PRINT str$
 SETVIG 
+PRINT 
 PRINT "fields: ["
 FOR field, 1, fieldCount, 1
     IF (FLDX(field)==0) & (FLDY(field)==0)
@@ -505,27 +506,31 @@ FOR field, 1, fieldCount, 1
     Hy(field) = -FLDY(field)/maxField
     PRINT "  {"
     FORMAT 2 INT
-    PRINT "    no                     : ", field
+    PRINT "    no                      : ", field
     FORMAT 6.3
-    PRINT "    Hx                     : ", Hx(field)
-    PRINT "    Hy                     : ", Hy(field)
-    PRINT "    x_field                : ", -FLDX(field)
-    PRINT "    y_field                : ", -FLDY(field)
-    PRINT "    vignetting_angle       : ", FVAN(field)
+    PRINT "    Hx                      : ", Hx(field)
+    PRINT "    Hy                      : ", Hy(field)
+    PRINT "    x_field                 : ", -FLDX(field)
+    PRINT "    y_field                 : ", -FLDY(field)
+    PRINT "    vignetting_angle        : ", FVAN(field)
     PRINT "    vignetting_compression_x: ", FVCX(field)
     PRINT "    vignetting_compression_y: ", FVCY(field)
-    PRINT "    vignetting_decenter_x  : ", FVDX(field)
-    PRINT "    vignetting_decenter_y  : ", FVDY(field)
+    PRINT "    vignetting_decenter_x   : ", FVDX(field)
+    PRINT "    vignetting_decenter_y   : ", FVDY(field)
     ! chief ray aberrations
     FORMAT 6.3 EXP 
     rang$ =      "      RANG: ["
     entr_rang$ = " entr_RANG: ["
+    chief_raga$ ="      RAGA: ["
+    chief_ragb$ ="      RAGB: ["
     h_1$ =       "       h_1: ["
     h_q$ =       "       h_q: ["
     FOR wave, 1, waveCount, 1
         IF wave > 1
             rang$ = rang$ + ", "
             entr_rang$ = entr_rang$ + ", "
+            chief_raga$ = chief_raga$ + ", "  
+            chief_ragb$ = chief_ragb$ + ", " 
             h_1$ = h_1$ + ", "
             h_q$ = h_q$ + ", "
         ENDIF
@@ -538,33 +543,41 @@ FOR field, 1, fieldCount, 1
         id = OCOD("RANG")
         rang$ = rang$ + $STR(OPEV(id, lastSurf, wave, Hx(field), Hy(field), 0, 0)) 
         entr_rang$ = entr_rang$ + $STR(OPEV(id, firstSurf, wave, Hx(field), Hy(field), 0, 0)) 
+        id = OCOD("RAGB")
+        chief_ragb$ = chief_ragb$ + $STR(OPEV(id, lastSurf, wave, Hx(field), Hy(field), 0, 0)) 
+        id = OCOD("RAGA")
+        chief_raga$ = chief_raga$ + $STR(OPEV(id, lastSurf, wave, Hx(field), Hy(field), 0, 0)) 
         IF FLDX(field) == 0
-            id = OCOD("REAY")
+            id_h = OCOD("REAY")
         ELSE
             IF FLDY(field) == 0
-                id = OCOD("REAX")
+                id_h = OCOD("REAX")
             ELSE 
                 PRINT "  },"
                 GOTO 101
                 ! 101 = next field
             ENDIF
         ENDIF
-        h_1$ = h_1$ + $STR(OPEV(id, 1, wave, Hx(field), Hy(field), 0, 0)) 
-        h_q$ = h_q$ + $STR(OPEV(id,lastSurf, wave, Hx(field), Hy(field), 0, 0)) 
+        h_1$ = h_1$ + $STR(OPEV(id_h, 1, wave, Hx(field), Hy(field), 0, 0)) 
+        h_q$ = h_q$ + $STR(OPEV(id_h,lastSurf, wave, Hx(field), Hy(field), 0, 0)) 
     NEXT
     rang$ = rang$ + "]"
     entr_rang$ = entr_rang$ + "]"
+    chief_raga$ = chief_raga$ + "]"
+    chief_ragb$ = chief_ragb$ + "]"
     h_1$ = h_1$ + "]"
     h_q$ = h_q$ + "]"
     PRINT "    chief: {"
     PRINT rang$
     PRINT entr_rang$
+    PRINT chief_raga$
+    PRINT chief_ragb$
     PRINT h_1$
     PRINT h_q$
     LABEL 201
     IF afocal_im_space == 0 
-        reax$ = "      REAX: ["
-        reay$ = "      REAY: ["
+        reax$ =       "      REAX: ["
+        reay$ =       "      REAY: ["
         FOR wave, 1, waveCount, 1
             IF wave > 1
                 reax$ = reax$ + ", "
@@ -611,12 +624,14 @@ FOR field, 1, fieldCount, 1
         tray$ = "        TRAY: ["
         anax$ = "        ANAX: ["
         anay$ = "        ANAY: ["
+        ragb$ = "        RAGB: ["
         FOR wave, 1, waveCount, 1
             IF wave > 1 
                 trax$ = trax$ + ", "
                 anax$ = anax$ + ", "
                 tray$ = tray$ + ", "
                 anay$ = anay$ + ", "
+                ragb$ = ragb$ + ", " 
             ENDIF
             ! TRAX(surface, wave, Hx, Hy, Px, Py)
             id = OCOD("TRAX")
@@ -633,11 +648,17 @@ FOR field, 1, fieldCount, 1
             id = OCOD("ANAY")
             opval = OPEV(id,0,wave,0, Hy(field), 0, Py(coord))
             anay$ = anay$ + $STR(opval)
+            ! RAGx(surf, wave, Hx, Hy, Px, Py)
+            id = OCOD("RAGB")
+            opval = OPEV(id,surfCount,wave,0, Hy(field), 0, Py(coord))
+            ragb$ = ragb$ + $STR(opval)
+
         NEXT
         tray$ = tray$ + "]"
         anay$ = anay$ + "]"
         trax$ = trax$ + "]"
         anax$ = anax$ + "]"
+        ragb$ = ragb$ + "]"
         IF afocal_im_space
             IF FLDY(field) == 0
                 PRINT anax$
@@ -651,6 +672,7 @@ FOR field, 1, fieldCount, 1
                 PRINT tray$
             ENDIF
         ENDIF
+        PRINT ragb$
         PRINT "        },"
     NEXT 
     PRINT "    ]"
@@ -668,12 +690,15 @@ FOR field, 1, fieldCount, 1
             tray$ = "        TRAY: ["
             anax$ = "        ANAX: ["
             anay$ = "        ANAY: ["
+            raga$ = "        RAGA: ["
+            ragb$ = "        RAGB: ["
             FOR wave, 1, waveCount, 1
                 IF wave > 1 
                     trax$ = trax$ + ", "
                     tray$ = tray$ + ", "
                     anax$ = anax$ + ", "
                     anay$ = anay$ + ", "
+                    raga$ = raga$ + ", " 
                 ENDIF
                 IF FLDY(field) == 0
                     ! TRAX(surface, wave, Hx, Hy, Px, Py)
@@ -690,6 +715,12 @@ FOR field, 1, fieldCount, 1
                     id = OCOD("ANAY")
                     opval = OPEV(id,surfCount,wave,Hx(field),0,0,Px(coord))
                     anay$ = anay$ + $STR(opval)
+                    id = OCOD("RAGA")
+                    opval = OPEV(id,surfCount,wave, Hx(field), 0, 0, Px(coord))
+                    raga$ = raga$ + $STR(opval)
+                    id = OCOD("RAGB")
+                    opval = OPEV(id,surfCount,wave, Hx(field), 0, 0, Px(coord))
+                    ragb$ = ragb$ + $STR(opval)
                 ELSE
                     ! TRAX(surface, wave, Hx, Hy, Px, Py)
                     id = OCOD("TRAX")
@@ -705,12 +736,20 @@ FOR field, 1, fieldCount, 1
                     id = OCOD("ANAY")
                     opval = OPEV(id,surfCount,wave,0,Hy(field),Px(coord),0)
                     anay$ = anay$ + $STR(opval)
+                    id = OCOD("RAGA")
+                    opval = OPEV(id,surfCount,wave, Hx(field), 0, Px(coord), 0)
+                    raga$ = raga$ + $STR(opval)
+                    id = OCOD("RAGB")
+                    opval = OPEV(id,surfCount,wave, Hx(field), 0, Px(coord), 0)
+                    ragb$ = ragb$ + $STR(opval)
                 ENDIF
             NEXT
             trax$ = trax$ + "]"
             tray$ = tray$ + "]"
             anax$ = anax$ + "]"
             anay$ = anay$ + "]"
+            raga$ = raga$ + "]"
+            ragb$ = ragb$ + "]"
             IF afocal_im_space
                 PRINT anax$
                 PRINT anay$
@@ -718,6 +757,8 @@ FOR field, 1, fieldCount, 1
                 PRINT trax$
                 PRINT tray$
             ENDIF
+            PRINT raga$
+            PRINT ragb$
             PRINT    "        },"
         ENDIF
     NEXT

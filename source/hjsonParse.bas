@@ -1,7 +1,13 @@
 Attribute VB_Name = "hjsonParse"
 Option Base 0
 Option Explicit
-
+Public Type TRayVec
+'used to return a vector-opval for all trace rays
+    axial_y As Double
+    chief_y As Double
+    upper_y As Double
+    lower_y As Double
+End Type
 Private Function parseOneLevel(ByVal jsonString As String) As Object
 'outputs a dictionary
 'doesn't parse arrays: parseArray(str) is used for that
@@ -355,6 +361,8 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
                     .Item("REAX") = CDblArr(delEmptyLines(parseArray(.Item("REAX"))))
                     .Item("REAY") = CDblArr(delEmptyLines(parseArray(.Item("REAY"))))
                     .Item("RANG") = CDblArr(delEmptyLines(parseArray(.Item("RANG"))))
+                    .Item("RAGA") = CDblArr(delEmptyLines(parseArray(.Item("RAGA"))))
+                    .Item("RAGB") = CDblArr(delEmptyLines(parseArray(.Item("RAGB"))))
                     .Item("entr_RANG") = CDblArr(delEmptyLines(parseArray(.Item("entr_RANG"))))
                         .Item("h_1") = CDblArr(delEmptyLines(parseArray(.Item("h_1"))))
                     .Item("h_q") = CDblArr(delEmptyLines(parseArray(.Item("h_q"))))
@@ -381,6 +389,7 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
                         .Item("TRAY") = CDblArr(delEmptyLines(parseArray(.Item("TRAY"))))
                         .Item("ANAX") = CDblArr(delEmptyLines(parseArray(.Item("ANAX"))))
                         .Item("ANAY") = CDblArr(delEmptyLines(parseArray(.Item("ANAY"))))
+                        .Item("RAGB") = CDblArr(delEmptyLines(parseArray(.Item("RAGB"))))
                     End With
                     tangDicts.Add tangDict
                 Next tangObjUnparsed
@@ -402,6 +411,8 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
                         .Item("TRAY") = CDblArr(delEmptyLines(parseArray(.Item("TRAY"))))
                         .Item("ANAX") = CDblArr(delEmptyLines(parseArray(.Item("ANAX"))))
                         .Item("ANAY") = CDblArr(delEmptyLines(parseArray(.Item("ANAY"))))
+                        .Item("RAGA") = CDblArr(delEmptyLines(parseArray(.Item("RAGA"))))
+                        .Item("RAGB") = CDblArr(delEmptyLines(parseArray(.Item("RAGB"))))
                     End With
                     sagDicts.Add sagDict
                 Next sagObjUnparsed

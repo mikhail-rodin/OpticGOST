@@ -1,6 +1,12 @@
 Attribute VB_Name = "jsonDisplay"
 Option Base 0
 Option Explicit
+Public Type TOptions
+    OPD As Boolean
+    anamorphic As Boolean
+    mRelative As Boolean
+    tgSigma As Boolean
+End Type
 Public Sub printStatus(ByVal info As String)
     With jsonForm.status
         .Caption = .text & vbCrLf & info
@@ -122,16 +128,14 @@ Public Sub refreshFields(lens As CLens)
         End If
     End With
 End Sub
-Public Sub fillAberTable(ByRef lens As CLens, startCell As Excel.Range)
-    Dim OPD As Boolean
-    OPD = jsonForm.OPDchk.value
+Public Sub fillAberTable(ByRef lens As CLens, startCell As Excel.Range, options As TOptions)
     
     Application.ScreenUpdating = False
     
     Dim chiefOffset As Integer, tangOffset As Integer, sagOffset, fullHeigth As Integer
     chiefOffset = printAxial(startCell, lens)
     tangOffset = chiefOffset + 1 + printChief(startCell.Offset(chiefOffset, 0), lens)
-    sagOffset = tangOffset + 2 + printTang(startCell.Offset(tangOffset, 0), lens)
+    sagOffset = tangOffset + 2 + printTang(startCell.Offset(tangOffset, 0), lens, options)
     fullHeigth = sagOffset + 1 + printSag(startCell.Offset(sagOffset, 0), lens)
     
     With startCell.Resize(fullHeigth * 2, 100)
@@ -397,7 +401,7 @@ Private Function printSag(startCell As Excel.Range, ByRef lens As CLens) As Inte
     End With
     printSag = lens.SagCoordCount * lens.selectedFieldCount + 3
 End Function
-Private Function printTang(startCell As Excel.Range, ByRef lens As CLens) As Integer
+Private Function printTang(startCell As Excel.Range, ByRef lens As CLens, options As TOptions) As Integer
 'returns printed row count
     Dim uINCR As String
     uINCR = ChrW(8710)
@@ -412,15 +416,26 @@ Private Function printTang(startCell As Excel.Range, ByRef lens As CLens) As Int
     Dim uOMEGA As String
     uOMEGA = ChrW(969)
     
+    Dim imSizeSymb As String
+    If lens.afocal Then
+        imSizeSymb = uSIGMA
+    Else
+        imSizeSymb = "y"
+    End If
+    
     Dim rowCount As Integer
     rowCount = lens.TangCoordCount + 3
+    Dim rayCoordColCount As Integer
+    rayCoordColCount = 1 + tools.BoolToInt(options.mRelative) + 2 * tools.BoolToInt(options.tgSigma)
     Dim colCount As Integer
-    colCount = 2 + 2 * lens.selectedWaveCount - 2
+    colCount = rayCoordColCount + 2 * lens.selectedWaveCount - 2
     If lens.selectedWaveCount = 1 Then colCount = 3
 
-    Dim rowOffset As Integer
-    Dim colOffset As Integer
-    Dim printedRowCount As Integer
+    Dim rowOffset As Integer 'of the whole table for a field
+    Dim colOffset As Integer 'of the whole table
+    'recalculated for each field (with a different formula based on field count)
+    Dim printedRowCount As Integer 'depends not only on pupil coord count
+    'but also on whether the tables are stacked or printed side by side
     
     Dim field As Integer
     For field = 1 To lens.selectedFieldCount
@@ -452,30 +467,65 @@ Private Function printTang(startCell As Excel.Range, ByRef lens As CLens) As Int
             printedRowCount = rowCount * 2
         End Select
         With startCell.Offset(rowOffset, colOffset)
-            With .Offset(1, 0)
+            Dim currentColOffset As Integer
+            currentColOffset = 0
+            With .Offset(1, currentColOffset)
                 .Resize(2, 1).Merge
                 .MergeArea.value = "m'"
                 .VerticalAlignment = xlCenter
             End With
-            With .Offset(1, 1)
-                .Resize(2, 1).Merge
-                .MergeArea.value = "m'-m'гл"
-                .Characters(Start:=6, Length:=2).Font.Subscript = True
-                .VerticalAlignment = xlCenter
-            End With
             Dim coord As Integer
             For coord = 1 To lens.TangCoordCount
-                .Offset(2 + coord, 0).value = Round(lens.mAbsTang(field, coord), 3)
-                .Offset(2 + coord, 1).value = Round(lens.mRelativeTang(field, coord), 3)
+                .Offset(2 + coord, currentColOffset).value = Round(lens.mAbsTang(field, coord), 3)
             Next coord
-            With .Offset(1, 2)
+            If options.mRelative Then
+                currentColOffset = currentColOffset + 1
+                With .Offset(1, currentColOffset)
+                    .Resize(2, 1).Merge
+                    .MergeArea.value = "m'-m'гл"
+                    .Characters(Start:=6, Length:=2).Font.Subscript = True
+                    .VerticalAlignment = xlCenter
+                End With
+                For coord = 1 To lens.TangCoordCount
+                    .Offset(2 + coord, currentColOffset).value = Round(lens.mRelativeTang(field, coord), 3)
+                Next coord
+            End If
+            If options.tgSigma Then
+                Dim RAGB As hjsonParse.TRayVec
+                RAGB = lens.raytraceOpVal("RAGB", lens.surfaceCount, 1)
+                currentColOffset = currentColOffset + 1
+                With .Offset(1, currentColOffset)
+                    .Resize(2, 1).Merge
+                    .MergeArea.value = "tg" + uSIGMA + "'"
+                    .VerticalAlignment = xlCenter
+                End With
+                For coord = 1 To lens.TangCoordCount
+                    .Offset(2 + coord, currentColOffset).value = Round(lens.tgSigmaImTang(field, 1, coord), 3)
+                Next coord
+                currentColOffset = currentColOffset + 1
+                With .Offset(1, currentColOffset)
+                    .Resize(2, 1).Merge
+                    .MergeArea.value = uINCR + "tg" + uSIGMA + "'"
+                    .VerticalAlignment = xlCenter
+                End With
+                Dim tgSigmaChief As Double
+                tgSigmaChief = lens.tgChiefRayAngle(field, 1)
+                For coord = 1 To lens.TangCoordCount
+                    .Offset(2 + coord, currentColOffset).value = _
+                        Round(lens.tgSigmaImTang(field, 1, coord) - tgSigmaChief, 3)
+                Next coord
+            End If
+            currentColOffset = currentColOffset + 1
+            With .Offset(1, currentColOffset)
                 .Resize(1, lens.selectedWaveCount).Merge
-                .MergeArea.value = uINCR & uSIGMA & "'"
+                .MergeArea.value = uINCR & imSizeSymb & "'"
             End With
+            currentColOffset = currentColOffset - 1 'a step back to fill the same cols
             Dim wave As Integer
             For wave = 1 To lens.selectedWaveCount
-            'transverse for each wave
-                With .Offset(2, 1 + wave)
+                currentColOffset = currentColOffset + 1
+                'transverse for each wave
+                With .Offset(2, currentColOffset)
                     .value = uLAMBDA & waveLetter(lens, wave)
                     .Characters(Start:=2, Length:=2).Font.Subscript = True
                     For coord = 1 To lens.TangCoordCount
@@ -491,9 +541,11 @@ Private Function printTang(startCell As Excel.Range, ByRef lens As CLens) As Int
             Next wave
             Dim shortWaveTR As Double
             Dim longWaveTR As Double
+            currentColOffset = currentColOffset + 1
             For wave = 2 To lens.selectedWaveCount - 1
             'transverse differences for each wave pair
-                With .Offset(1, 2 + lens.selectedWaveCount)
+                'With .Offset(1, 2 + lens.selectedWaveCount)
+                With .Offset(1, currentColOffset)
                     For coord = 1 To lens.TangCoordCount
                         If lens.afocal Then
                             shortWaveTR = lens.tangOpVal("ANAY", field, wave, coord)
@@ -508,8 +560,8 @@ Private Function printTang(startCell As Excel.Range, ByRef lens As CLens) As Int
                         End If
                     Next coord
                     .Resize(2, 1).Merge
-                    .MergeArea.value = uINCR & uSIGMA & "'" & waveLetter(lens, wave) & _
-                        "-" & uINCR & uSIGMA & waveLetter(lens, wave + 1)
+                    .MergeArea.value = uINCR & imSizeSymb & "'" & waveLetter(lens, wave) & _
+                        "-" & uINCR & imSizeSymb & waveLetter(lens, wave + 1)
                     .Characters(Start:=3, Length:=2).Font.Subscript = True
                     .Characters(Start:=9, Length:=2).Font.Subscript = True
                 End With

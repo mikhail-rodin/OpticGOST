@@ -1,5 +1,11 @@
 Attribute VB_Name = "tools"
 Option Explicit
+Public Function BoolToInt(b As Boolean) As Integer
+'in this ancient language boolean true is stored as 16 bit 111...1, which has a -1 int value.
+'VBA, I don't have any patience for your senile nonsense
+'thus we need a custom CInt
+    If b Then BoolToInt = 1 Else BoolToInt = 0
+End Function
 
 'quicksort algorithm courtesy of Jorge Ferreira
 Public Sub QuickSort(vArray As Variant, inLow As Long, inHi As Long)

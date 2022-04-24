@@ -1,8 +1,8 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} jsonForm 
    Caption         =   "Импорт lensdata.json"
-   ClientHeight    =   5840
-   ClientLeft      =   80
+   ClientHeight    =   5844
+   ClientLeft      =   84
    ClientTop       =   300
    ClientWidth     =   9780
    OleObjectBlob   =   "jsonForm.frx":0000
@@ -27,10 +27,15 @@ End Sub
 Private Sub generateTablesBtn_Click()
     Dim aberSheet As Excel.Worksheet
     Dim rndSheet As Excel.Worksheet
+    Dim options As jsonDisplay.TOptions
+    options.OPD = Me.OPDchk
+    options.anamorphic = Me.anamorphicChk
+    options.mRelative = Me.mRelativeChk
+    options.tgSigma = Me.tgSigmaExitChk
     With Me
         If .aberTableChk.value = True Then
             Set aberSheet = Application.Worksheets.Add
-            Call jsonDisplay.fillAberTable(CLens, aberSheet.Range("A1"))
+            Call jsonDisplay.fillAberTable(CLens, aberSheet.Range("A1"), options)
         End If
         If .rndTableChk.value = True Then
             Set rndSheet = Application.Worksheets.Add
