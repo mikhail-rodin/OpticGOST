@@ -19,11 +19,14 @@
 
 PRINT 
 PRINT "+---------------------------------------------+"
-PRINT "|            OpticGOST v1.3.0                 |"
+PRINT "|            OpticGOST v1.3.3                 |"
 PRINT "| https://github.com/mikhail-rodin/OpticGOST  |"
 PRINT "+---------------------------------------------+"
 PRINT "|          JSON lens data export              |"
 PRINT "+---------------------------------------------+"
+PRINT
+PRINT "Note: OpticGOST uses Zemax global coordinates,"
+PRINT "so choosing a reference surface might make a difference."
 PRINT
 fileName$ = $FILENAME()
 fNameLen = SLEN(fileName$)
@@ -51,7 +54,8 @@ Px(1) = 0
 Px_count = 1
 Py_count = 4
 
-! these are coords used to compute raytrace data
+! these are coord vectors used to compute raytrace data
+! vec = (axial, chief, upper, lower)^T
 DECLARE raytrace_Hx, double, 1, 50
 DECLARE raytrace_Hy, double, 1, 50
 DECLARE raytrace_Px, double, 1, 50
@@ -68,15 +72,15 @@ raytrace_Py(2) = 0
 raytrace_Hx(2) = 0
 raytrace_Hy(2) = 1
 ! 3 - upper_y
-raytrace_Px(2) = 0
-raytrace_Py(2) = 1
-raytrace_Hx(2) = 0
-raytrace_Hy(2) = 1
+raytrace_Px(3) = 0
+raytrace_Py(3) = 1
+raytrace_Hx(3) = 0
+raytrace_Hy(3) = 1
 ! 4 - lower_y
-raytrace_Px(2) = 0
-raytrace_Py(2) = -1
-raytrace_Hx(2) = 0
-raytrace_Hy(2) = 1
+raytrace_Px(4) = 0
+raytrace_Py(4) = -1
+raytrace_Hx(4) = 0
+raytrace_Hy(4) = 1
 
 ! array of indices of coord sets for which raytrace data is calculated
 DECLARE raytraceSelection, integer, 1, 8
