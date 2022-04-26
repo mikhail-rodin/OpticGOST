@@ -183,7 +183,9 @@ maxField = MAXF()
 
 apertureType = SYPR(10)
 ! 0 for entrance pupil diameter
-! 1 for image space F/# ! 2 for object space num aperture NA ! 3 for float by stop size
+! 1 for image space F/# 
+! 2 for object space num aperture NA 
+! 3 for float by stop size
 ! 4 for paraxial working F/#
 ! 5 for object cone angle in degrees
 apertureValue = SYPR(11)
@@ -221,12 +223,12 @@ str$ = "units: " + $UNITS()
 PRINT str$
 FORMAT 1 INT
 PRINT "afocal: ", afocal_im_space
-PRINT "telecentric_obj_space: ", VEC1(25)
+PRINT "telecentric_obj_space: ", $STR(VEC1(25))
 FORMAT 5.2
-PRINT "paraxial_magnification: ", VEC1(16)
-PRINT "angular_magnification: ", VEC1(17)
-PRINT "EFFL: ", VEC1(7)
-PRINT "total_track: ", VEC1(18)
+PRINT "paraxial_magnification: ", $STR(VEC1(16))
+PRINT "angular_magnification: ", $STR(VEC1(17))
+PRINT "EFFL: ", $STR(VEC1(7))
+PRINT "total_track: ", $STR(VEC1(18))
 FORMAT 2 INT
 PRINT "wavelength_count: ", waveCount
 PRINT "primary_wavelength: ", primaryWave
@@ -245,10 +247,10 @@ PRINT "aperture_data: {"
 FORMAT 1 INT
 PRINT "  type : ", apertureType
 FORMAT 6.3
-PRINT "  value: ", apertureValue
-PRINT "  WFNO : ", VEC1(10)
-PRINT "  D_im : ", exitPupilDiam
-PRINT "  D_obj: ", entrPupilDiam
+PRINT "  value: ", $STR(apertureValue)
+PRINT "  WFNO : ", $STR(VEC1(10))
+PRINT "  D_im : ", $STR(exitPupilDiam)
+PRINT "  D_obj: ", $STR(entrPupilDiam)
 str$ = "  ENPP : " + $STR(entrPupilPos) + "  #relative to first surface"
 PRINT str$
 str$ = "  EXPP : " + $STR(exitPupilPos) + " #relative to image surface"
@@ -270,17 +272,17 @@ FOR i, 1, surfCount, 1
     PRINT "    type     : ", str$
     FORMAT 12.6 
     id = OCOD("POWR")
-    PRINT "    power    : ", OPEV(id, i, primaryWave, 0, 0, 0, 0)
-    PRINT "    curvature: ", CURV(i)
-    PRINT "    thickness: ", THIC(i)
-    PRINT "    conic    : ", CONI(i)
-    PRINT "    edge     : ", EDGE(i)
+    PRINT "    power    : ", $STR(OPEV(id, i, primaryWave, 0, 0, 0, 0))
+    PRINT "    curvature: ", $STR(CURV(i))
+    PRINT "    thickness: ", $STR(THIC(i))
+    PRINT "    conic    : ", $STR(CONI(i))
+    PRINT "    edge     : ", $STR(EDGE(i))
     str$ = "    glass    : " + $GLASS(i)
     PRINT str$
     str$ = "    catalog  : " + $GLASSCATALOG(i)
     PRINT str$
-    PRINT "    index@d  : ", GIND(i)
-    PRINT "    abbe     : ", GABB(i)
+    PRINT "    index@d  : ", $STR(GIND(i))
+    PRINT "    abbe     : ", $STR(GABB(i))
     FOR ray, 1, selectedRayCount, 1
         IF ray == 1 
             PRINT "    axial_y  : {"
@@ -345,7 +347,7 @@ PRINT "maximum: {"
 id = OCOD("DIMX")
 ! DIST(field, wave, absolute)
 ! 0 for max field
-PRINT "    DIMX_percent: ", OPEV(id, 0, primaryWave, 0, 0, 0,0)
+PRINT "    DIMX_percent: ", $STR(OPEV(id, 0, primaryWave, 0, 0, 0,0))
 PRINT "}"
 PRINT
 PRINT "axial_x: ["
@@ -353,7 +355,7 @@ FOR coord, 1, Py_count, 1
     IF Py(coord) >= 0 
         PRINT "  {"
         FORMAT 5.4
-        PRINT "  Px: ", Py(coord) 
+        PRINT "  Px: ", $STR(Py(coord))
         ! not a typo: Py coords are taken as tangential
         trax$ =      "  TRAX     : ["
         lona$ =      "  LONA     : ["
@@ -409,7 +411,7 @@ FOR coord, 1, Py_count, 1
         PRINT h_q$
         id = OCOD("OSCD")
         ! OSCD(surface, wave, zone)
-        PRINT "  OSCD: ", OPEV(id, 0, primaryWave, Py(i), 0, 0, 0)
+        PRINT "  OSCD: ", $STR(OPEV(id, 0, primaryWave, Py(i), 0, 0, 0))
         PRINT "  },"
     ENDIF
 NEXT
@@ -419,7 +421,7 @@ FOR coord, 1, Py_count, 1
     IF Py(coord) >= 0 
         PRINT "  {"
         FORMAT 5.4
-        PRINT "  Py: ", Py(coord) 
+        PRINT "  Py: ", $STR(Py(coord))
         ! not a typo: Py coords are taken as tangential
         tray$ =      "  TRAY     : ["
         lona$ =      "  LONA     : ["
@@ -475,7 +477,7 @@ FOR coord, 1, Py_count, 1
         PRINT h_q$
         id = OCOD("OSCD")
         ! OSCD(surface, wave, zone)
-        PRINT "  OSCD: ", OPEV(id, 0, primaryWave, Py(i), 0, 0, 0)
+        PRINT "  OSCD: ", $STR(OPEV(id, 0, primaryWave, Py(i), 0, 0, 0))
         PRINT "  },"
     ENDIF
 NEXT
@@ -508,15 +510,15 @@ FOR field, 1, fieldCount, 1
     FORMAT 2 INT
     PRINT "    no                      : ", field
     FORMAT 6.3
-    PRINT "    Hx                      : ", Hx(field)
-    PRINT "    Hy                      : ", Hy(field)
-    PRINT "    x_field                 : ", -FLDX(field)
-    PRINT "    y_field                 : ", -FLDY(field)
-    PRINT "    vignetting_angle        : ", FVAN(field)
-    PRINT "    vignetting_compression_x: ", FVCX(field)
-    PRINT "    vignetting_compression_y: ", FVCY(field)
-    PRINT "    vignetting_decenter_x   : ", FVDX(field)
-    PRINT "    vignetting_decenter_y   : ", FVDY(field)
+    PRINT "    Hx                      : ", $STR(Hx(field))
+    PRINT "    Hy                      : ", $STR(Hy(field))
+    PRINT "    x_field                 : ", $STR(-FLDX(field))
+    PRINT "    y_field                 : ", $STR(-FLDY(field))
+    PRINT "    vignetting_angle        : ", $STR(FVAN(field))
+    PRINT "    vignetting_compression_x: ", $STR(FVCX(field))
+    PRINT "    vignetting_compression_y: ", $STR(FVCY(field))
+    PRINT "    vignetting_decenter_x   : ", $STR(FVDX(field))
+    PRINT "    vignetting_decenter_y   : ", $STR(FVDY(field))
     ! chief ray aberrations
     FORMAT 6.3 EXP 
     rang$ =      "      RANG: ["
@@ -615,9 +617,9 @@ FOR field, 1, fieldCount, 1
     FOR coord, 1, Py_count, 1
         FORMAT 6.3
         IF FLDY(field) == 0
-            PRINT   "        { Px: ", Py(coord)
+            PRINT   "        { Px: ", $STR(Py(coord))
         ELSE
-            PRINT   "        { Py: ", Py(coord)
+            PRINT   "        { Py: ", $STR(Py(coord))
         ENDIF
         FORMAT 6.3 EXP
         trax$ = "        TRAX: ["
@@ -681,9 +683,9 @@ FOR field, 1, fieldCount, 1
         IF Px(coord) > 0 
             FORMAT 6.3
             IF FLDY(field) == 0
-                PRINT   "        { Py: ", Px(coord)
+                PRINT   "        { Py: ", $STR(Px(coord))
             ELSE
-                PRINT   "        { Px: ", Px(coord)
+                PRINT   "        { Px: ", $STR(Px(coord))
             ENDIF
             FORMAT 6.3 EXP
             trax$ = "        TRAX: ["
