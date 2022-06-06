@@ -494,7 +494,6 @@ PRINT "# full half-field angle or height"
 FORMAT 6.3
 str$ = "max_field: " + $STR(maxField)
 PRINT str$
-SETVIG 
 PRINT 
 PRINT "fields: ["
 FOR field, 1, fieldCount, 1
