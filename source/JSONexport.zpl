@@ -19,7 +19,7 @@
 
 PRINT 
 PRINT "+---------------------------------------------+"
-PRINT "|            OpticGOST v1.3.3                 |"
+PRINT "|            OpticGOST v1.3.4                 |"
 PRINT "| https://github.com/mikhail-rodin/OpticGOST  |"
 PRINT "+---------------------------------------------+"
 PRINT "|          JSON lens data export              |"
@@ -386,7 +386,7 @@ FOR coord, 1, Py_count, 1
             lona$ = lona$ + $STR(OPEV(id, wave, 0, Py(coord), 0, 0, 0)) 
             ! RANG(surface, wave, Hx, Hy, Px, Py)
             id = OCOD("RANG")
-            entr_rang$ = entr_rang$ + $STR(OPEV(id,firstSurf,wave,0,0,Py(coord),0))
+            entr_rang$ = entr_rang$ + $STR(OPEV(id,0,wave,0,0,Py(coord),0))
             exit_rang$ = exit_rang$ + $STR(OPEV(id,lastSurf,wave,0,0,Py(coord),0))
             id = OCOD("REAX")
             h_1$ = h_1$ + $STR(OPEV(id,firstSurf,wave,0,0,Py(coord),0))
@@ -452,7 +452,7 @@ FOR coord, 1, Py_count, 1
             lona$ = lona$ + $STR(OPEV(id, wave, 0,Py(coord), 0, 0, 0)) 
             ! RANG(surface, wave, Hx, Hy, Px, Py)
             id = OCOD("RANG")
-            entr_rang$ = entr_rang$ + $STR(OPEV(id,firstSurf,wave,0,0,0,Py(coord)))
+            entr_rang$ = entr_rang$ + $STR(OPEV(id,0,wave,0,0,0,Py(coord)))
             exit_rang$ = exit_rang$ + $STR(OPEV(id,lastSurf,wave,0,0,0,Py(coord)))
             id = OCOD("REAY")
             h_1$ = h_1$ + $STR(OPEV(id,firstSurf,wave,0,0,0,Py(coord)))
@@ -508,7 +508,7 @@ FOR field, 1, fieldCount, 1
     PRINT "  {"
     FORMAT 2 INT
     PRINT "    no                      : ", field
-    FORMAT 6.3
+    FORMAT 6.5
     PRINT "    Hx                      : ", $STR(Hx(field))
     PRINT "    Hy                      : ", $STR(Hy(field))
     PRINT "    x_field                 : ", $STR(-FLDX(field))
@@ -519,17 +519,21 @@ FOR field, 1, fieldCount, 1
     PRINT "    vignetting_decenter_x   : ", $STR(FVDX(field))
     PRINT "    vignetting_decenter_y   : ", $STR(FVDY(field))
     ! chief ray aberrations
-    FORMAT 6.3 EXP 
+    FORMAT 6.5 EXP 
     rang$ =      "      RANG: ["
-    entr_rang$ = " entr_RANG: ["
     chief_raga$ ="      RAGA: ["
     chief_ragb$ ="      RAGB: ["
+    entr_rang$ = " entr_RANG: ["
+    entr_raga$ = " entr_RAGA: ["
+    entr_ragb$ = " entr_RAGB: ["
     h_1$ =       "       h_1: ["
     h_q$ =       "       h_q: ["
     FOR wave, 1, waveCount, 1
         IF wave > 1
             rang$ = rang$ + ", "
             entr_rang$ = entr_rang$ + ", "
+            entr_raga$ = entr_raga$ + ", "
+            entr_ragb$ = entr_ragb$ + ", "
             chief_raga$ = chief_raga$ + ", "  
             chief_ragb$ = chief_ragb$ + ", " 
             h_1$ = h_1$ + ", "
@@ -541,13 +545,18 @@ FOR field, 1, fieldCount, 1
         ! 3. entrance ray angle
         ! 4. chief ray height at 1st surface
         ! and for finite object space we also need image height. That's all.
+        !
+        ! Direction cosines and angles are specified after refraction in zmx,
+        ! so object space = surface 0, not 1 as would've been the case had zmx dealt in incident rays.
         id = OCOD("RANG")
         rang$ = rang$ + $STR(OPEV(id, lastSurf, wave, Hx(field), Hy(field), 0, 0)) 
-        entr_rang$ = entr_rang$ + $STR(OPEV(id, firstSurf, wave, Hx(field), Hy(field), 0, 0)) 
+        entr_rang$ = entr_rang$ + $STR(OPEV(id, 0, wave, Hx(field), Hy(field), 0, 0)) 
         id = OCOD("RAGB")
         chief_ragb$ = chief_ragb$ + $STR(OPEV(id, lastSurf, wave, Hx(field), Hy(field), 0, 0)) 
+        entr_ragb$ = entr_ragb$ + $STR(OPEV(id, 0, wave, Hx(field), Hy(field), 0, 0)) 
         id = OCOD("RAGA")
         chief_raga$ = chief_raga$ + $STR(OPEV(id, lastSurf, wave, Hx(field), Hy(field), 0, 0)) 
+        entr_raga$ = entr_raga$ + $STR(OPEV(id, 0, wave, Hx(field), Hy(field), 0, 0)) 
         IF FLDX(field) == 0
             id_h = OCOD("REAY")
         ELSE
@@ -564,6 +573,8 @@ FOR field, 1, fieldCount, 1
     NEXT
     rang$ = rang$ + "]"
     entr_rang$ = entr_rang$ + "]"
+    entr_raga$ = entr_raga$ + "]"
+    entr_ragb$ = entr_ragb$ + "]"
     chief_raga$ = chief_raga$ + "]"
     chief_ragb$ = chief_ragb$ + "]"
     h_1$ = h_1$ + "]"
@@ -571,6 +582,8 @@ FOR field, 1, fieldCount, 1
     PRINT "    chief: {"
     PRINT rang$
     PRINT entr_rang$
+    PRINT entr_raga$
+    PRINT entr_ragb$
     PRINT chief_raga$
     PRINT chief_ragb$
     PRINT h_1$
@@ -614,13 +627,13 @@ FOR field, 1, fieldCount, 1
     ! if Hx = 0 (usual case), find aberrations for varying Py
     FORMAT 6.3
     FOR coord, 1, Py_count, 1
-        FORMAT 6.3
+        FORMAT 6.5
         IF FLDY(field) == 0
             PRINT   "        { Px: ", $STR(Py(coord))
         ELSE
             PRINT   "        { Py: ", $STR(Py(coord))
         ENDIF
-        FORMAT 6.3 EXP
+        FORMAT 6.5 EXP
         trax$ = "        TRAX: ["
         tray$ = "        TRAY: ["
         anax$ = "        ANAX: ["
@@ -680,13 +693,13 @@ FOR field, 1, fieldCount, 1
     PRINT "    sagittal: ["
     FOR coord, 1, Px_count, 1
         IF Px(coord) > 0 
-            FORMAT 6.3
+            FORMAT 6.5
             IF FLDY(field) == 0
                 PRINT   "        { Py: ", $STR(Px(coord))
             ELSE
                 PRINT   "        { Px: ", $STR(Px(coord))
             ENDIF
-            FORMAT 6.3 EXP
+            FORMAT 6.5 EXP
             trax$ = "        TRAX: ["
             tray$ = "        TRAY: ["
             anax$ = "        ANAX: ["

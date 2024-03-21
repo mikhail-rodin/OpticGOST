@@ -184,7 +184,7 @@ Private Function printChief(startCell As Excel.Range, ByRef lens As CLens) As In
                     For field = 1 To lens.selectedFieldCount
                         If lens.afocal Then
                             .Offset(field, 0).value = tools.degMinSec( _
-                                tools.Deg(lens.chiefRayAngle(wave, field)))
+                                tools.deg(lens.chiefRayAngle(wave, field)))
                         Else
                             .Offset(field, 0).value = _
                                 Round(lens.chiefOpVal("REAY", wave, field), 4)
@@ -204,7 +204,7 @@ Private Function printChief(startCell As Excel.Range, ByRef lens As CLens) As In
                     For field = 1 To lens.selectedFieldCount
                         If lens.afocal Then
                             .Offset(field, 0).value = tools.degMinSec( _
-                                tools.Deg(lens.chiefRayAngle(wave, field) _
+                                tools.deg(lens.chiefRayAngle(wave, field) _
                                     - lens.chiefRayAngle(wave + 1, field)))
                         Else
                             .Offset(field, 0).value = Round(lens.chiefOpVal("REAY", wave, field) _
@@ -220,9 +220,15 @@ Private Function printChief(startCell As Excel.Range, ByRef lens As CLens) As In
             Dim zM As Double
             Dim zS As Double
             Dim imSize As Double
+            Dim fieldVal As Double
             For field = 1 To lens.selectedFieldCount
+                If lens.isSelXfield(field) Then
+                    fieldVal = lens.Xfield(field)
+                Else
+                    fieldVal = lens.yField(field)
+                End If
                 distortionVal = lens.chiefOpVal("DISG", 0, field)
-                .Offset(field, 0).value = tools.degMinSec(lens.yField(field))
+                .Offset(field, 0).value = tools.degMinSec(fieldVal)
                 .Offset(field, 1).value = Round(lens.sP_entr(field, 1), 4)
                 .Offset(field, 3).value = Round(lens.sP_exit(field, 1), 4)
                 .Offset(field, 5).value = Round(distortionVal, 2)
@@ -230,9 +236,9 @@ Private Function printChief(startCell As Excel.Range, ByRef lens As CLens) As In
                 zS = lens.chiefOpVal("FCGS", 0, field)
                 If lens.afocal Then
                     imSize = lens.chiefRayAngle(1, field) 'in radians
-                    .Offset(field, 2).value = tools.degMinSec(tools.Deg(imSize))
+                    .Offset(field, 2).value = tools.degMinSec(tools.deg(imSize))
                     .Offset(field, 4).value = tools.degMinSec( _
-                        distortionVal * tools.Deg(imSize) / 100)
+                        distortionVal * tools.deg(imSize) / 100)
                     .Offset(field, 6).value = Round(zM * Cos(imSize), 4)
                     .Offset(field, 7).value = Round(zS * Cos(imSize), 4)
                     .Offset(field, 8).value = Round((zM - zS) * Cos(imSize), 4)
@@ -297,6 +303,7 @@ Private Function printChief(startCell As Excel.Range, ByRef lens As CLens) As In
             .Resize(offsetDown + 2, 1).Merge
             .MergeArea.value = "sP"
             .Characters(Start:=2, Length:=1).Font.Subscript = True
+            .VerticalAlignment = xlCenter
         End With
     End With
     printChief = lens.selectedFieldCount + 3
@@ -317,13 +324,35 @@ Private Function printSag(startCell As Excel.Range, ByRef lens As CLens) As Inte
     uOMEGA = ChrW(969)
     
     Dim TAberSymbol As String, SAberSymbol As String
+    Dim TAberOpCode As String, SAberOpCode As String
+    Dim Xfield As Boolean
+    
+    Xfield = lens.isSelXfield(1)
+    ' currently you have to manually select either all X or all Y field points
+    
     If lens.afocal Then
-    'note: symbols always 3 chars wide
+        'note: symbols always 3 chars wide
         TAberSymbol = uINCR + uSIGMA + "'"
         SAberSymbol = uINCR + uPSI + "'"
+        If Xfield Then
+            TAberOpCode = "ANAX"
+            SAberOpCode = "ANAY"
+        Else
+            TAberOpCode = "ANAY"
+            SAberOpCode = "ANAX"
+        End If
     Else
-        TAberSymbol = uINCR + "y'"
-        SAberSymbol = uINCR + "x'"
+        If Xfield Then
+            TAberSymbol = uINCR + "x'"
+            SAberSymbol = uINCR + "y'"
+            TAberOpCode = "TRAX"
+            SAberOpCode = "TRAY"
+        Else
+            TAberSymbol = uINCR + "y'"
+            SAberSymbol = uINCR + "x'"
+            TAberOpCode = "TRAY"
+            SAberOpCode = "TRAX"
+        End If
     End If
     
     With startCell
@@ -356,14 +385,14 @@ Private Function printSag(startCell As Excel.Range, ByRef lens As CLens) As Inte
                             vShift = (field - 1) * lens.SagCoordCount + coord + 2
                             If lens.afocal Then
                                 .Offset(vShift, 0) = tools.degMinSec( _
-                                    tools.Deg(lens.sagOpVal("ANAX", field, wave, coord)))
+                                    tools.deg(lens.sagOpVal(SAberOpCode, field, wave, coord)))
                                 .Offset(vShift, 1) = tools.degMinSec( _
-                                    tools.Deg(lens.sagOpVal("ANAY", field, wave, coord)))
+                                    tools.deg(lens.sagOpVal(TAberOpCode, field, wave, coord)))
                             Else
                                 .Offset(vShift, 0) = _
-                                    Round(lens.sagOpVal("TRAX", field, wave, coord), 4)
+                                    Round(lens.sagOpVal(SAberOpCode, field, wave, coord), 4)
                                 .Offset(vShift, 1) = _
-                                    Round(lens.sagOpVal("TRAY", field, wave, coord), 4)
+                                    Round(lens.sagOpVal(TAberOpCode, field, wave, coord), 4)
                             End If
                         Next coord
                     Next field
@@ -379,10 +408,16 @@ Private Function printSag(startCell As Excel.Range, ByRef lens As CLens) As Inte
         End With
         With .Offset(2, 0)
         'print values
+            Dim fieldVal As Double
             For field = 1 To lens.selectedFieldCount
+                If Xfield Then
+                    fieldVal = lens.Xfield(field)
+                Else
+                    fieldVal = lens.yField(field)
+                End If
                 With .Offset((field - 1) * lens.SagCoordCount + 1, 0)
                     .Resize(lens.SagCoordCount, 1).Merge
-                    .MergeArea.value = tools.degMinSec(lens.yField(field))
+                    .MergeArea.value = tools.degMinSec(fieldVal)
                     .VerticalAlignment = xlCenter
                 End With
                 For coord = 1 To lens.SagCoordCount
@@ -416,13 +451,6 @@ Private Function printTang(startCell As Excel.Range, ByRef lens As CLens, option
     Dim uOMEGA As String
     uOMEGA = ChrW(969)
     
-    Dim imSizeSymb As String
-    If lens.afocal Then
-        imSizeSymb = uSIGMA
-    Else
-        imSizeSymb = "y"
-    End If
-    
     Dim rowCount As Integer
     rowCount = lens.TangCoordCount + 3
     Dim rayCoordColCount As Integer
@@ -439,6 +467,32 @@ Private Function printTang(startCell As Excel.Range, ByRef lens As CLens, option
     
     Dim field As Integer
     For field = 1 To lens.selectedFieldCount
+    
+        Dim imSizeSymb As String
+        Dim transverseAbrOpCode As String 'depends on whether the plane is XZ or YZ and if the lens is afocal
+        Dim fieldVal As Double, vigFactor As Double
+        If lens.isSelXfield(field) Then
+            fieldVal = lens.Xfield(field)
+            vigFactor = lens.vigCompressionX(field)
+            If lens.afocal Then
+                transverseAbrOpCode = "ANAX"
+                imSizeSymb = uSIGMA
+            Else
+                transverseAbrOpCode = "TRAX"
+                imSizeSymb = "x"
+            End If
+        Else
+            fieldVal = lens.yField(field)
+            vigFactor = lens.vigCompressionY(field)
+            If lens.afocal Then
+                transverseAbrOpCode = "ANAY"
+                imSizeSymb = uSIGMA
+            Else
+                transverseAbrOpCode = "TRAY"
+                imSizeSymb = "y"
+            End If
+        End If
+        
         Select Case lens.selectedFieldCount
         Case 1 To 2:
         'tables are printed in a row
@@ -491,8 +545,6 @@ Private Function printTang(startCell As Excel.Range, ByRef lens As CLens, option
                 Next coord
             End If
             If options.tgSigma Then
-                Dim RAGB As hjsonParse.TRayVec
-                RAGB = lens.raytraceOpVal("RAGB", lens.surfaceCount, 1)
                 currentColOffset = currentColOffset + 1
                 With .Offset(1, currentColOffset)
                     .Resize(2, 1).Merge
@@ -531,10 +583,10 @@ Private Function printTang(startCell As Excel.Range, ByRef lens As CLens, option
                     For coord = 1 To lens.TangCoordCount
                         If lens.afocal Then
                             .Offset(coord, 0).value = tools.degMinSec( _
-                                tools.Deg(lens.tangOpVal("ANAY", field, wave, coord)))
+                                tools.deg(lens.tangOpVal(transverseAbrOpCode, field, wave, coord)))
                         Else
                             .Offset(coord, 0).value = _
-                                Round(lens.tangOpVal("TRAY", field, wave, coord), 4)
+                                Round(lens.tangOpVal(transverseAbrOpCode, field, wave, coord), 4)
                         End If
                     Next coord
                 End With
@@ -548,39 +600,32 @@ Private Function printTang(startCell As Excel.Range, ByRef lens As CLens, option
                 With .Offset(1, currentColOffset)
                     For coord = 1 To lens.TangCoordCount
                         If lens.afocal Then
-                            shortWaveTR = lens.tangOpVal("ANAY", field, wave, coord)
-                            longWaveTR = lens.tangOpVal("ANAY", field, wave + 1, coord)
+                            shortWaveTR = lens.tangOpVal(transverseAbrOpCode, field, wave, coord)
+                            longWaveTR = lens.tangOpVal(transverseAbrOpCode, field, wave + 1, coord)
                             .Offset(1 + coord, 0).value = _
-                                tools.degMinSec(tools.Deg(shortWaveTR - longWaveTR))
+                                tools.degMinSec(tools.deg(shortWaveTR - longWaveTR))
                         Else
-                            shortWaveTR = lens.tangOpVal("TRAY", field, wave, coord)
-                            longWaveTR = lens.tangOpVal("TRAY", field, wave + 1, coord)
+                            shortWaveTR = lens.tangOpVal(transverseAbrOpCode, field, wave, coord)
+                            longWaveTR = lens.tangOpVal(transverseAbrOpCode, field, wave + 1, coord)
                             .Offset(1 + coord, 0).value = _
                                 Round(shortWaveTR - longWaveTR, 4)
                         End If
                     Next coord
                     .Resize(2, 1).Merge
                     .MergeArea.value = uINCR & imSizeSymb & "'" & waveLetter(lens, wave) & _
-                        "-" & uINCR & imSizeSymb & waveLetter(lens, wave + 1)
-                    .Characters(Start:=3, Length:=2).Font.Subscript = True
-                    .Characters(Start:=9, Length:=2).Font.Subscript = True
+                        "-" & uINCR & imSizeSymb & "'" & waveLetter(lens, wave + 1)
+                    .Characters(Start:=4, Length:=2).Font.Subscript = True
+                    .Characters(Start:=10, Length:=2).Font.Subscript = True
                 End With
             Next wave
-            Dim fieldVal As Double, vigFactor As Double
-            If lens.isXfield(lens.selectedField(field)) Then
-                fieldVal = lens.xField(field)
-                vigFactor = lens.vigCompressionX(field)
-            Else
-                fieldVal = lens.yField(field)
-                vigFactor = lens.vigCompressionY(field)
-            End If
+
             If field > 1 Then
             'first header is filled later so that merging does not disturb formatting
                 With .Offset(0, 0)
                     .Resize(1, colCount).Merge
                     .MergeArea.value = uOMEGA & CStr(field) & "=" & _
-                        tools.degMinSec(fieldVal) + ", k=" & _
-                            CStr(Round(1 - lens.vigCompressionY(field), 2))
+                        tools.degMin(fieldVal) + ", k=" & _
+                            CStr(Round(1 - lens.vigCompressionTang(field), 2))
                     .Characters(Start:=2, Length:=1).Font.Subscript = True
                 End With
             End If
@@ -588,16 +633,16 @@ Private Function printTang(startCell As Excel.Range, ByRef lens As CLens, option
     Next field
     With startCell
         .Resize(1, colCount).Merge
-        If lens.isXfield(lens.selectedField(1)) Then
-            fieldVal = lens.xField(1)
+        If lens.isSelXfield(1) Then
+            fieldVal = lens.Xfield(1)
         Else
             fieldVal = lens.yField(1)
         End If
         .MergeArea.value = uOMEGA & "1=" & _
-            tools.degMinSec(fieldVal) + ", k=" & CStr(Round(1 - lens.vigCompressionY(1), 2))
+            tools.degMin(fieldVal) + ", k=" & CStr(Round(1 - lens.vigCompressionTang(1), 2))
         .Characters(Start:=2, Length:=1).Font.Subscript = True
     End With
-    printTang = printedRowCount
+    printTang = printedRowCount + 1
 End Function
 Private Function printAxial(startCell As Excel.Range, ByRef lens As CLens) As Integer
 'returns number of rows printed
@@ -644,13 +689,13 @@ Private Function printAxial(startCell As Excel.Range, ByRef lens As CLens) As In
                     If lens.afocal Then
                         .MergeArea.value = uSIGMA & "', град"
                     Else
-                        .MergeArea.value = uSIGMA & "', мм"
+                        .MergeArea.value = uINCR & "y', мм"
                     End If
                     .VerticalAlignment = xlCenter
                     For coord = 1 To lens.axialYCoordCount
                         If lens.afocal Then
                             .Offset(coord, 0).value = tools.degMinSec( _
-                                tools.Deg(lens.axialYOpVal("ANAY", 1, coord)))
+                                tools.deg(lens.axialYOpVal("ANAY", 1, coord)))
                         Else
                             .Offset(coord, 0).value = _
                                 Round(lens.axialYOpVal("TRAY", 1, coord), 4)
@@ -717,7 +762,7 @@ Private Function printAxial(startCell As Excel.Range, ByRef lens As CLens) As In
                         For coord = 1 To lens.axialYCoordCount
                             If lens.afocal Then
                                 .Offset(coord, 0).value = tools.degMinSec( _
-                                    tools.Deg(lens.axialYOpVal("ANAY", wave, coord)))
+                                    tools.deg(lens.axialYOpVal("ANAY", wave, coord)))
                             Else
                                 .Offset(coord, 0).value = _
                                     Round(lens.axialYOpVal("TRAY", wave, coord), 4)
@@ -732,8 +777,8 @@ Private Function printAxial(startCell As Excel.Range, ByRef lens As CLens) As In
                         Dim longWaveTR As Double
                         For coord = 1 To lens.axialYCoordCount
                             If lens.afocal Then
-                                shortWaveTR = tools.Deg(lens.axialYOpVal("ANAY", wave, coord))
-                                longWaveTR = tools.Deg(lens.axialYOpVal("ANAY", wave + 1, coord))
+                                shortWaveTR = tools.deg(lens.axialYOpVal("ANAY", wave, coord))
+                                longWaveTR = tools.deg(lens.axialYOpVal("ANAY", wave + 1, coord))
                                 .Offset(coord + 1, 0).value = _
                                     tools.degMinSec(shortWaveTR - longWaveTR)
                             Else
@@ -796,10 +841,11 @@ Public Function checkWaveCount(ByRef lens As CLens) As Boolean
         checkWaveCount = True
     Case Else:
         Call rinseStatus
-        Call printStatus("Выбрана 1, 3 или 4 длины волны!")
+        Call printStatus("Выберите 1, 3 или 4 спектральные линии!")
         checkWaveCount = False
     End Select
 End Function
 Private Function waveLetter(lens As CLens, waveNo As Integer) As String
     waveLetter = optics.SpectralLine(1000 * lens.wavelength(lens.selectedWave(waveNo)))
 End Function
+

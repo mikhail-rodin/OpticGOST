@@ -38,6 +38,9 @@ Private Type TLens
     primaryWaveNo As Integer
     surfaceCount As Integer
     lastSurface As Integer
+    firstSurface As Integer
+    objToFirstSrf As Double 'distance from OBJ to srf1
+    imgToLastSrf As Double 'distance from IMA to last srf
 End Type
 Private This As TLens
 Private Sub Class_Initialize()
@@ -58,7 +61,18 @@ Public Sub parse(json As String)
     This.afocal = This.mainDict.Item("afocal")
     This.primaryWaveNo = This.mainDict.Item("primary_wavelength")
     This.surfaceCount = This.mainDict.Item("surface_count")
+    This.lastSurface = findFirstSurf()
     This.lastSurface = findLastSurf()
+    
+    Dim srf As Integer
+    This.objToFirstSrf = 0
+    For srf = 1 To This.firstSurface
+        This.objToFirstSrf = This.objToFirstSrf + Me.thickness(srf)
+    Next srf
+    This.imgToLastSrf = 0
+    For srf = This.lastSurface To This.surfaceCount
+        This.imgToLastSrf = This.imgToLastSrf - Me.thickness(srf)
+    Next srf
 End Sub
 Property Get name() As String
     name = This.mainDict.Item("name")
@@ -94,10 +108,21 @@ End Property
 Property Get fieldCount() As Integer
     fieldCount = This.fieldCount
 End Property
-Property Get isXfield(fieldNo As Integer) As Boolean
+Private Function isXfield(fieldNo As Integer) As Boolean
 'returns true if y_field = 0 for a given field
     Const eps As Double = 0.05
-    If Abs(Me.srcHy(fieldNo)) < eps And Abs(Me.srcHx(fieldNo)) > 2 * eps Then isXfield = True
+    If Abs(Me.srcHy(fieldNo)) < eps And Abs(Me.srcHx(fieldNo)) > 2 * eps Then isXfield = True Else isXfield = False
+End Function
+Private Function isYfield(fieldNo As Integer) As Boolean
+'returns true if x_field = 0 for a given field
+    Const eps As Double = 0.05
+    If Abs(Me.srcHx(fieldNo)) < eps And Abs(Me.srcHy(fieldNo)) > 2 * eps Then isYfield = True Else isYfield = False
+End Function
+Property Get isSelXfield(selField As Integer) As Boolean
+    isSelXfield = isXfield(This.selectedFields(selField))
+End Property
+Property Get isSelYfield(selField As Integer) As Boolean
+    isSelYfield = isYfield(This.selectedFields(selField))
 End Property
 Property Get waveCount() As Integer
     waveCount = This.waveCount
@@ -109,18 +134,18 @@ End Property
 Property Get tgSigmaImTang(selField As Integer, selWave As Integer, coord As Integer) As Double
 'tg(sigma), where sigma is angle of oblique ray (chief, rim or in between)
 ' coming out of exit pupil into the off-axis image point
-    Dim M As Double, N As Double
+    Dim M As Double, n As Double
     M = This.mainDict.Item("fields")(This.selectedFields(selField)) _
         .Item("tangential")(coord).Item("RAGB")(This.selectedWaves(selWave) - 1)
     'L^2 + M^2 + N^1 = 1, L=RAGA=0 => N^2 = 1 - M^2
-    N = Sqr(1 - M ^ 2)
-    tgSigmaImTang = Tan(M / N)
+    n = Sqr(1 - M ^ 2)
+    tgSigmaImTang = M / n
 End Property
 Property Get tgChiefRayAngle(selField As Integer, selWave As Integer) As Double
-    Dim M As Double, N As Double
+    Dim M As Double, n As Double
     M = Me.chiefOpVal("RAGB", selWave, selField)
-    N = Sqr(1 - M ^ 2) 'as L=0
-    tgChiefRayAngle = Tan(M / N)
+    n = Sqr(1 - M ^ 2) 'as L=0
+    tgChiefRayAngle = M / n
 End Property
 Property Get sagOpVal(opName As String, selField As Integer, selWave As Integer, coord As Integer) As Double
     sagOpVal = This.mainDict.Item("fields")(This.selectedFields(selField)) _
@@ -165,8 +190,8 @@ End Property
 Property Get chiefRayAngle(selWave As Integer, selField As Integer)
     Dim RANG As Double, fieldVal As Double
     RANG = Me.chiefOpVal("RANG", selWave, selField)
-    If Me.isXfield(selField) Then
-        fieldVal = Me.xField(selField)
+    If Me.isSelXfield(selField) Then
+        fieldVal = Me.Xfield(selField)
     Else
         fieldVal = Me.yField(selField)
     End If
@@ -197,8 +222,8 @@ End Property
 Property Get m_obj(fieldNo As Integer) As Double
 
 End Property
-Property Get xField(selField As Integer) As Double
-    xField = This.mainDict.Item("fields")(This.selectedFields(selField)).Item("x_field")
+Property Get Xfield(selField As Integer) As Double
+    Xfield = This.mainDict.Item("fields")(This.selectedFields(selField)).Item("x_field")
 End Property
 Property Get srcXField(fieldNo As Integer) As Double
     srcXField = This.mainDict.Item("fields")(fieldNo).Item("x_field")
@@ -233,6 +258,15 @@ Property Get vigCompressionY(selField As Integer) As Double
     vigCompressionY = This.mainDict.Item("fields")(This.selectedFields(selField)) _
         .Item("vignetting_compression_y")
 End Property
+Property Get vigCompressionTang(selField As Integer) As Double
+    If isSelXfield(selField) Then
+        vigCompressionTang = vigCompressionX(selField)
+    ElseIf isSelYfield(selField) Then
+        vigCompressionTang = vigCompressionY(selField)
+    Else
+        vigCompressionTang = 0 ' TODO: skew vig compression
+    End If
+End Property
 Property Get vigDecenterX(selField As Integer) As Double
     vigDecenterX = This.mainDict.Item("fields")(This.selectedFields(selField)) _
         .Item("vignetting_decenter_x")
@@ -252,17 +286,33 @@ Property Get surfaceCount() As Integer
 End Property
 Private Function findLastSurf() As Integer
 'returns number of last lens surface
-    Dim surf As Integer, lastSurf As Integer
-    Dim N As Integer
+    Dim surf As Integer, lastGlassSurf As Integer
+    Dim n As Double
     Const eps As Integer = 0.01
-    For surf = 1 To This.surfaceCount
-        N = This.mainDict.Item("surfaces")(surf).Item("index@d")
-        If Abs(N - 1) > eps Then
+    For surf = This.surfaceCount To 1 Step -1
+        n = This.mainDict.Item("surfaces")(surf).Item("index@d")
+        If Abs(n) > eps Then ' in zemax n=0 for air
         'if it's glass
-            lastSurf = surf + 1
+            lastGlassSurf = surf
+            Exit For
         End If
     Next surf
-    findLastSurf = lastSurf
+    findLastSurf = lastGlassSurf + 1
+End Function
+Private Function findFirstSurf() As Integer
+'returns number of last lens surface
+    Dim surf As Integer, firstSurf As Integer
+    Dim n As Double
+    Const eps As Integer = 0.01
+    For surf = 1 To This.surfaceCount
+        n = This.mainDict.Item("surfaces")(surf).Item("index@d")
+        If Abs(n) > eps Then ' in zemax n=0 for air
+        'if it's glass
+            firstSurf = surf
+            Exit For
+        End If
+    Next surf
+    findFirstSurf = firstSurf
 End Function
 Property Get mRelativeTang(selField As Integer, coord As Integer) As Double
 'image space m coord relative to chief ray heigth for a tangential ray fan
@@ -271,7 +321,7 @@ Property Get mRelativeTang(selField As Integer, coord As Integer) As Double
     mag = This.mainDict.Item("angular_magnification")
     Dim P As Double, P1 As Double
     Dim h_q As Double, d_increment As Double
-    If Me.isXfield(This.selectedFields(selField)) Then
+    If Me.isSelXfield(selField) Then
         P = This.mainDict.Item("fields")(This.selectedFields(selField)) _
             .Item("tangential")(coord).Item("Px")
         P1 = Me.vigDecenterX(selField) + (1 - Me.vigCompressionX(selField)) * P
@@ -288,7 +338,7 @@ Property Get mRelativeSag(selField As Integer, coord As Integer) As Double
     EXPD = This.mainDict.Item("aperture_data").Item("D_im")
     mag = This.mainDict.Item("angular_magnification")
     Dim P As Double, P1 As Double
-    If Me.isXfield(This.selectedFields(selField)) Then
+    If Me.isSelXfield(selField) Then
         P = This.mainDict.Item("fields")(This.selectedFields(selField)) _
             .Item("tangential")(coord).Item("Px")
         P1 = Me.vigDecenterX(selField) + (1 - Me.vigCompressionX(selField)) * P
@@ -331,7 +381,7 @@ Property Get MEntrAbsSag(selField As Integer, coord As Integer) As Double
     Dim ENPD As Double
     ENPD = This.mainDict.Item("aperture_data").Item("D_obj")
     Dim P As Double, P1 As Double
-    If Me.isXfield(This.selectedFields(selField)) Then
+    If Me.isSelXfield(selField) Then
         P = This.mainDict.Item("fields")(This.selectedFields(selField)) _
             .Item("sagittal")(coord).Item("Py")
         P1 = Me.vigDecenterY(selField) + (1 - Me.vigCompressionY(selField)) * P
@@ -344,14 +394,18 @@ Property Get MEntrAbsSag(selField As Integer, coord As Integer) As Double
 End Property
 Property Get mExitTShiftSag(selField As Integer, coord As Integer) As Double
 'tangential exit pupil m coord of a sagittal ray fan
-    mExitTShiftSag = chiefRayYShiftEXP(selField)
+    If Me.isSelXfield(selField) Then
+        mExitTShiftSag = 0
+    Else
+        mExitTShiftSag = chiefRayTShiftEXP(selField)
+    End If
 End Property
 Property Get MExitAbsSag(selField As Integer, coord As Integer) As Double
 'image space m coord relative to chief ray heigth for a tangential ray fan
     Dim EXPD As Double
     EXPD = This.mainDict.Item("aperture_data").Item("D_im")
     Dim P As Double, P1 As Double
-    If Me.isXfield(This.selectedFields(selField)) Then
+    If Me.isSelXfield(selField) Then
         P = This.mainDict.Item("fields")(This.selectedFields(selField)) _
             .Item("sagittal")(coord).Item("Py")
         P1 = Me.vigDecenterY(selField) + (1 - Me.vigCompressionY(selField)) * P
@@ -363,41 +417,49 @@ Property Get MExitAbsSag(selField As Integer, coord As Integer) As Double
     MExitAbsSag = EXPD * P1 / 2
 End Property
 Property Get mAbsTang(selField As Integer, coord As Integer)
-    mAbsTang = Me.mRelativeTang(selField, coord) + chiefRayYShiftEXP(selField)
+    mAbsTang = Me.mRelativeTang(selField, coord) + chiefRayTShiftEXP(selField)
 End Property
 Property Get mAbsSag(selField As Integer, coord As Integer)
     mAbsTang = Me.mRelativeSag(selField, coord)
 End Property
-Private Function chiefRayYShiftEXP(selField As Integer) As Double
+Private Function chiefRayTShiftEXP(selField As Integer) As Double
 'Y coord of real chief ray on the exit pupil
     Dim sP_exit_real As Double, sP_exit_paraxial As Double, realAng As Double
     realAng = Me.chiefRayAngle(1, selField)
     'since Zemax measures EXPP from image surf (+ is to right), we'll substract last d
-    sP_exit_paraxial = Me.thickness(This.surfaceCount - 1) _
-        + This.mainDict.Item("aperture_data").Item("EXPP")
+    sP_exit_paraxial = This.mainDict.Item("aperture_data").Item("EXPP") - This.imgToLastSrf
     sP_exit_real = Abs(Me.sP_exit(selField, 1)) * Sgn(sP_exit_paraxial)
-    chiefRayYShiftEXP = (sP_exit_real - sP_exit_paraxial) * Tan(realAng)
+    chiefRayTShiftEXP = (sP_exit_real - sP_exit_paraxial) * Tan(realAng)
 End Function
 Property Get sP_entr(selField As Integer, selWave As Integer) As Double
 'entrance pupil pos relative to first surface
-'    Dim h1 As Double, ang1 As Double
-'    h1 = This.mainDict.Item("fields")(This.selectedFields(selField)) _
-'        .Item("chief").Item("h_1")(This.selectedWaves(selWave) - 1)
-'    ang1 = This.mainDict.Item("fields")(This.selectedFields(selField)) _
-'        .Item("chief").Item("entr_RANG")(This.selectedWaves(selWave) - 1)
-'    sP_entr = Abs(h1) / Tan(ang1)
-    sP_entr = This.mainDict.Item("aperture_data").Item("ENPP")
+    Dim h1 As Double, ang1 As Double, sP_entr_paraxial As Double
+    Const h_eps As Double = 0.1
+    h1 = This.mainDict.Item("fields")(This.selectedFields(selField)) _
+        .Item("chief").Item("h_1")(This.selectedWaves(selWave) - 1)
+    ang1 = This.mainDict.Item("fields")(This.selectedFields(selField)) _
+        .Item("chief").Item("entr_RANG")(This.selectedWaves(selWave) - 1)
+    sP_entr_paraxial = This.mainDict.Item("aperture_data").Item("ENPP")
+    If Abs(h1) < h_eps Then 'pupil = stop
+        sP_entr = sP_entr_paraxial - This.objToFirstSrf
+    Else
+        sP_entr = Abs(h1 / Tan(ang1)) * Sgn(sP_entr_paraxial) - This.objToFirstSrf
+    End If
 End Property
 Property Get sP_exit(selField As Integer, selWave As Integer) As Double
-'entrance pupil pos relative to first surface
+'exit pupil pos relative to last surface
     Dim h_q As Double, ang_q As Double, sP_exit_paraxial As Double
-    sP_exit_paraxial = Me.thickness(This.surfaceCount - 1) _
-        + This.mainDict.Item("aperture_data").Item("EXPP")
+    Const h_eps As Double = 0.1
+    sP_exit_paraxial = This.mainDict.Item("aperture_data").Item("EXPP")
     h_q = This.mainDict.Item("fields")(This.selectedFields(selField)) _
         .Item("chief").Item("h_q")(This.selectedWaves(selWave) - 1)
     ang_q = This.mainDict.Item("fields")(This.selectedFields(selField)) _
         .Item("chief").Item("RANG")(This.selectedWaves(selWave) - 1)
-    sP_exit = Abs(h_q / Tan(ang_q)) * Sgn(sP_exit_paraxial)
+    If Abs(h_q) < h_eps Then 'pupil = stop
+        sP_exit = sP_exit_paraxial - This.imgToLastSrf
+    Else
+        sP_exit = Abs(h_q / Tan(ang_q)) * Sgn(sP_exit_paraxial) - This.imgToLastSrf
+    End If
 End Property
 Property Get isoplanaticErrorY(axialYCoord As Integer) As Double
 'error in meeting Lihotzky isoplanatic condition
@@ -542,3 +604,4 @@ Private Sub sortSelWaves()
         End If
     End If
 End Sub
+

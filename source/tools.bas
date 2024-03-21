@@ -50,23 +50,50 @@ Public Function angDeg(degrees As Double) As Integer
     angDeg = Fix(degrees)
 End Function
 Public Function angMin(degrees As Double) As Integer
-    Dim Deg As Double
-    Deg = Fix(degrees)
-    angMin = Int((Abs(degrees - Deg)) * 60)
+    Dim deg As Double
+    deg = Fix(degrees)
+    angMin = Int((Abs(degrees - deg)) * 60)
 End Function
 Public Function angSec(degrees As Double) As Integer
-    Dim Deg As Double
-    Deg = Fix(degrees)
-    angSec = Int(((Abs(degrees - Deg)) * 60 - Int((Abs(degrees - Deg)) * 60)) * 60)
+    Dim deg As Double
+    deg = Fix(degrees)
+    angSec = Int(((Abs(degrees - deg)) * 60 - Int((Abs(degrees - deg)) * 60)) * 60)
+End Function
+Public Function angFractSec(degrees As Double) As Double
+    Dim deg As Double
+    deg = Fix(degrees)
+    angFractSec = ((Abs(degrees - deg)) * 60 - Int((Abs(degrees - deg)) * 60)) * 60
 End Function
 Public Function degMinSec(degrees As Double) As String
-    degMinSec = CStr(angDeg(degrees)) & ChrW(176) & CStr(angMin(degrees)) & "'" & CStr(angSec(degrees)) & "''"
+    Dim deg As Integer, min As Integer, sec As Double
+    deg = angDeg(degrees)
+    min = angMin(degrees)
+    sec = angFractSec(degrees)
+    If deg = 0 Then
+        If min = 0 Then
+            degMinSec = Replace(CStr(Round(sec, 2)), ".", ",") & "''"
+        Else
+            degMinSec = CStr(min) & "'" & CStr(Int(sec)) & "''"
+        End If
+    Else
+        degMinSec = CStr(deg) & ChrW(176) & CStr(min) & "'" & CStr(Int(sec)) & "''"
+    End If
 End Function
-Public Function rad(Deg As Double) As Double
-    Const Pi As Double = 3.1415927
-    rad = Deg * Pi / 180
+Public Function degMin(degrees As Double) As String
+    Dim deg As Integer, min As Integer
+    deg = angDeg(degrees)
+    min = angMin(degrees)
+    If deg = 0 Then
+        degMin = CStr(min) & "'"
+    Else
+        degMin = CStr(deg) & ChrW(176) & CStr(min) & "'"
+    End If
 End Function
-Public Function Deg(rad As Double) As Double
+Public Function rad(deg As Double) As Double
     Const Pi As Double = 3.1415927
-    Deg = rad * 180 / Pi
+    rad = deg * Pi / 180
+End Function
+Public Function deg(rad As Double) As Double
+    Const Pi As Double = 3.1415927
+    deg = rad * 180 / Pi
 End Function
