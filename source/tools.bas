@@ -97,3 +97,21 @@ Public Function deg(rad As Double) As Double
     Const Pi As Double = 3.1415927
     deg = rad * 180 / Pi
 End Function
+Public Function ArcCos(A As Double) As Double 'in radians
+  'Inverse Cosine
+    On Error Resume Next
+        If A = 1 Then
+            ArcCos = 0
+            Exit Function
+        End If
+        ArcCos = Atn(-A / Sqr(-A * A + 1)) + 2 * Atn(1)
+    On Error GoTo 0
+End Function
+Public Function ArcSin(ByVal x As Double) As Double 'in radians
+    If x = 1 Then
+        ArcSin = 0
+        Exit Function
+    Else
+        ArcSin = Atn(x / Sqr(-x * x + 1))
+    End If
+End Function

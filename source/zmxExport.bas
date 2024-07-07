@@ -24,7 +24,7 @@ Set dialog = Application.FileDialog(msoFileDialogSaveAs)
     End With
     
     Set SrcSheet = ActiveSheet
-        sel = Selection.Address
+        sel = selection.Address
         If sel = "" Then
             MsgBox "Ничего не выбрано"
             Exit Sub
@@ -69,7 +69,7 @@ Set dialog = Application.FileDialog(msoFileDialogSaveAs)
     Application.DisplayAlerts = False
     
     Set SrcSheet = ActiveSheet
-        sel = Selection.Address
+        sel = selection.Address
         If sel = "" Then
             MsgBox "Ничего не выбрано"
             Exit Sub

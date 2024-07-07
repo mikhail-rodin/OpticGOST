@@ -1,6 +1,15 @@
 Attribute VB_Name = "optics"
 Option Base 0
 Option Explicit
+Public Function LZOStranslate(ByVal glass As String) As String
+    If InStr(1, glass, "LZ_") Then
+        glass = Replace(glass, "LZ_", "")
+        glass = Replace(glass, "F", "Ô")
+        glass = Replace(glass, "B", "Á")
+        glass = Replace(glass, "L", "Ë")
+    End If
+    LZOStranslate = glass
+End Function
 Public Function SpectralLine(wavelength_nm As Double) As String
 ' returns a Fraunhofer line letter (e.g. e', F, G etc)
 ' for a wavelength in nanometers
@@ -10,7 +19,7 @@ Public Function SpectralLine(wavelength_nm As Double) As String
     elt = ""
     fl = ""
     Select Case wavelength_nm
-        Case 404 To 450
+        Case 404 To 405
             fl = "h "
             elt = "Hg"
         Case 435 To 436

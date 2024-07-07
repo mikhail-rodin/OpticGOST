@@ -1,10 +1,10 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} jsonForm 
    Caption         =   "Импорт lensdata.json"
-   ClientHeight    =   5844
-   ClientLeft      =   84
+   ClientHeight    =   5985
+   ClientLeft      =   90
    ClientTop       =   300
-   ClientWidth     =   9780
+   ClientWidth     =   9090.001
    OleObjectBlob   =   "jsonForm.frx":0000
    StartUpPosition =   1  'CenterOwner
 End
@@ -13,8 +13,8 @@ Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
-'@Folder("OpticGOST")
 
+'@Folder("OpticGOST")
 Private Sub fieldAdd_Click()
     Call jsonDisplay.addFields(CLens)
     Call jsonDisplay.refreshFields(CLens)
@@ -24,14 +24,20 @@ Private Sub fieldDel_Click()
     Call jsonDisplay.delFields(CLens)
     Call jsonDisplay.refreshFields(CLens)
 End Sub
+
+Private Sub frmFieldindex_Click()
+
+End Sub
+
 Private Sub generateTablesBtn_Click()
     Dim aberSheet As Excel.Worksheet
     Dim rndSheet As Excel.Worksheet
     Dim options As jsonDisplay.TOptions
-    options.OPD = Me.OPDchk
-    options.anamorphic = Me.anamorphicChk
+    options.OPD = 0
+    options.anamorphic = 0
     options.mRelative = Me.mRelativeChk
     options.tgSigma = Me.tgSigmaExitChk
+    options.origFieldindices = Me.optFieldindexOriginal.value
     With Me
         If .aberTableChk.value = True Then
             Set aberSheet = Application.Worksheets.Add
@@ -47,7 +53,6 @@ Private Sub importBtn_Click()
     Dim filePath As String
     Dim json As String
     filePath = jsonForm.pathBox.text
-    'filePath = "C:\Users\Rodin\Documents\optics\TV-wide70deg\retrofocus_v6\retrofocus_v6mod1_lensdata.json"
     json = hjsonParse.readTextToString(filePath)
     Call CLens.parse(json)
     With jsonForm
@@ -59,8 +64,6 @@ Private Sub importBtn_Click()
         .waveDel.Enabled = True
         .generateTablesBtn.Enabled = True
         .tablesFrm.Enabled = True
-        .OPDchk.Enabled = True
-        .anamorphicChk.Enabled = True
         .aberTableChk.Enabled = True
         .rndTableChk.Enabled = True
     End With
@@ -91,9 +94,27 @@ Private Sub openFileBtn_Click()
         .pathBox.text = strFile
         .importBtn.Enabled = True
     End With
+
+    Call CLens.parse(hjsonParse.readTextToString(strFile))
+    With jsonForm
+        .fieldFrm.Enabled = True
+        .fieldAdd.Enabled = True
+        .fieldDel.Enabled = True
+        .waveFrm.Enabled = True
+        .waveAdd.Enabled = True
+        .waveDel.Enabled = True
+        .generateTablesBtn.Enabled = True
+        .tablesFrm.Enabled = True
+        .aberTableChk.Enabled = True
+        .rndTableChk.Enabled = True
+    End With
+    Call jsonDisplay.refreshWaves(CLens)
+    Call jsonDisplay.refreshFields(CLens)
 End Sub
 
+Private Sub optFieldindexOriginal_Click()
 
+End Sub
 
 Private Sub UserForm_Initialize()
 
@@ -108,8 +129,6 @@ Private Sub UserForm_Initialize()
         .tablesFrm.Enabled = False
         
         .importBtn.Enabled = False
-        
-        .OPDchk.Enabled = False
         
         .status.Caption = "Откройте файл JSON, сохранённый макросом JSONexport.zpl "
     End With

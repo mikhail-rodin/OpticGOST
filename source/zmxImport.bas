@@ -962,3 +962,4 @@ Public Function ArcSin(ByVal x As Double) As Double 'в радианах
         ArcSin = Atn(x / Sqr(-x * x + 1))
     End If
 End Function
+

@@ -168,6 +168,9 @@ End Property
 Property Get axialYCoordCount() As Integer
     axialYCoordCount = This.mainDict.Item("axial_y").Count
 End Property
+Property Get axialXCoordCount() As Integer
+    axialXCoordCount = This.mainDict.Item("axial_x").Count
+End Property
 Property Get axialYOpVal(opName As String, selWave As Integer, coord As Integer) As Double
 'selwave=0 must be passed for monocromatic operands
     If selWave = 0 Then
@@ -281,6 +284,44 @@ End Property
 Property Get thickness(surfaceNo As Integer) As Double
     thickness = This.mainDict.Item("surfaces")(surfaceNo).Item("thickness")
 End Property
+Property Get glass(surfaceNo As Integer) As String
+    glass = This.mainDict.Item("surfaces")(surfaceNo).Item("glass")
+End Property
+Property Get indexOfRefraction(surfaceNo As Integer) As Double
+    Dim n As Double
+    n = This.mainDict.Item("surfaces")(surfaceNo).Item("index@d")
+    If Abs(n) < 0.0000000001 Then
+        indexOfRefraction = 1
+    Else
+        indexOfRefraction = n
+    End If
+End Property
+Property Get isAirspace(srf As Integer) As Boolean
+    isAirspace = (Me.indexOfRefraction(srf) < 1.01)
+End Property
+Property Get abbeNumber(surfaceNo As Integer) As Double
+    abbeNumber = This.mainDict.Item("surfaces")(surfaceNo).Item("abbe")
+End Property
+Property Get diameter(surfaceNo As Integer) As Double
+    diameter = This.mainDict.Item("surfaces")(surfaceNo).Item("diameter")
+End Property
+Property Get sag(srf As Integer) As Double
+    Dim c As Double
+    c = Me.curvature(srf)
+    If c = 0 Then
+        sag = 0
+    Else
+        Dim rimToCoC As Double, D As Double, r As Double
+        r = 1 / c
+        D = Me.diameter(srf)
+        rimToCoC = Sqr(r ^ 2 - (D / 2) ^ 2)
+        If r > 0 Then
+            sag = r - rimToCoC
+        Else
+            sag = r + rimToCoC
+        End If
+    End If
+End Property
 Property Get surfaceCount() As Integer
     surfaceCount = This.surfaceCount
 End Property
@@ -356,7 +397,7 @@ Property Get m_entr_AxialY(coord As Integer) As Double
 '    P = This.mainDict.Item("axial_y")(coord).Item("Py")
 '    m_entr_AxialY = ENPD * P / 2
     Dim sP As Double, apertureAng As Double
-    sP = This.mainDict.Item("aperture_data").Item("ENPP")
+    sP = Me.sP_entr(1, 1)
     apertureAng = Me.axialYOpVal("entr_RANG", 1, coord)
     Dim h_increment As Double, h_1 As Double
     'ray height difference between first surf and entrance pupil
@@ -364,6 +405,18 @@ Property Get m_entr_AxialY(coord As Integer) As Double
     h_increment = sP * Tan(apertureAng)
     h_1 = Me.axialYOpVal("h_1", 1, coord)
     m_entr_AxialY = h_1 + h_increment
+End Property
+Property Get m_entr_AxialX(coord As Integer) As Double
+    Dim sP As Double, apertureAng As Double
+    'sP = This.mainDict.Item("aperture_data").Item("ENPP")
+    sP = Me.sP_entr(1, 1)
+    apertureAng = Me.axialXOpVal("entr_RANG", 1, coord)
+    Dim h_increment As Double, h_1 As Double
+    'ray height difference between first surf and entrance pupil
+    'and ray height on the 1st surface
+    h_increment = sP * Tan(apertureAng)
+    h_1 = Me.axialXOpVal("h_1", 1, coord)
+    m_entr_AxialX = h_1 + h_increment
 End Property
 Property Get m_exit_AxialY(coord As Integer) As Double
     Dim sP_exit As Double, apertureAng As Double
@@ -374,7 +427,18 @@ Property Get m_exit_AxialY(coord As Integer) As Double
     'and ray height on the 1st surface
     h_increment = sP_exit * Tan(apertureAng)
     h_q = Me.axialYOpVal("h_q", 1, coord)
-    m_exit_AxialY = h_q + h_increment
+    m_exit_AxialY = h_q - h_increment
+End Property
+Property Get m_exit_AxialX(coord As Integer) As Double
+    Dim sP_exit As Double, apertureAng As Double
+    sP_exit = Me.sP_exit(1, 1)
+    apertureAng = Me.axialXOpVal("exit_RANG", 1, coord)
+    Dim h_increment As Double, h_q As Double
+    'ray height difference between last surf and entrance pupil
+    'and ray height on the 1st surface
+    h_increment = sP_exit * Tan(apertureAng)
+    h_q = Me.axialXOpVal("h_q", 1, coord)
+    m_exit_AxialX = h_q - h_increment
 End Property
 Property Get MEntrAbsSag(selField As Integer, coord As Integer) As Double
 'image space m coord relative to chief ray heigth for a tangential ray fan
@@ -449,6 +513,12 @@ End Property
 Property Get sP_exit(selField As Integer, selWave As Integer) As Double
 'exit pupil pos relative to last surface
     Dim h_q As Double, ang_q As Double, sP_exit_paraxial As Double
+    Dim sF_ As Double
+    Dim tangentialYZ As Boolean
+    tangentialYZ = Me.isSelYfield(selField)
+    'EXPP is correctly calculated only for Y fields or in a RSOS
+    sF_ = Me.thickness(Me.surfaceCount - 1)
+    
     Const h_eps As Double = 0.1
     sP_exit_paraxial = This.mainDict.Item("aperture_data").Item("EXPP")
     h_q = This.mainDict.Item("fields")(This.selectedFields(selField)) _
@@ -458,7 +528,7 @@ Property Get sP_exit(selField As Integer, selWave As Integer) As Double
     If Abs(h_q) < h_eps Then 'pupil = stop
         sP_exit = sP_exit_paraxial - This.imgToLastSrf
     Else
-        sP_exit = Abs(h_q / Tan(ang_q)) * Sgn(sP_exit_paraxial) - This.imgToLastSrf
+        sP_exit = Abs(h_q / Tan(ang_q)) * Sgn(sP_exit_paraxial) - sF_ - This.imgToLastSrf
     End If
 End Property
 Property Get isoplanaticErrorY(axialYCoord As Integer) As Double

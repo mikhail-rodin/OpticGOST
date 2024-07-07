@@ -19,7 +19,7 @@
 
 PRINT 
 PRINT "+---------------------------------------------+"
-PRINT "|            OpticGOST v1.3.4                 |"
+PRINT "|            OpticGOST v1.3.5                 |"
 PRINT "| https://github.com/mikhail-rodin/OpticGOST  |"
 PRINT "+---------------------------------------------+"
 PRINT "|          JSON lens data export              |"
@@ -36,6 +36,9 @@ fName$ = $LEFTSTRING(fileName$, fNameLen - 4)
 
 zmxPath$ = $PATHNAME()
 ! where zmx file is stored
+
+!-----------------------------------------------------------------------------
+! constants and settings
 
 jsonFilePath$ = zmxPath$ + "\" + fName$ + "_lensdata.json"
 
@@ -91,6 +94,9 @@ raytraceSelection(3) = 3
 raytraceSelection(4) = 4
 selectedRayCount = 4
 ! coord sets with index 5 and further are set in config file
+
+!-----------------------------------------------------------------------------
+! parsing of config
 
 ! TODO: read raytrace coords from config
 
@@ -163,6 +169,10 @@ PRINT "Saving a JSON file with lens data and aberration analysis data"
 msg$ = "   to " + jsonFilePath$
 PRINT msg$
 
+!-----------------------------------------------------------------------------
+! from now on, we write to file, not to console
+!-----------------------------------------------------------------------------
+
 OUTPUT jsonFilePath$
 GETSYSTEMDATA 1
 waveCount = NWAV()
@@ -173,14 +183,39 @@ id = OCOD("EFFL")
 ! EFFL(void, wave)
 IF (afocal_im_space == 0) THEN effl = OPEV(id, 0, primaryWave, 0, 0, 0, 0)
 
+!-----------------------------------------------------------------------------
+! field data
+
 fieldCount = NFLD()
 fieldTypeID = SYPR(100)
 ! 0 for angle
 ! 1 for obj height
 ! 2 for paraxial image height
 ! 3 for real image height
-maxField = MAXF()
+max_xField = 0
+max_yField = 0
+FOR field, 1, fieldCount, 1
+    xField = FLDX(field)
+    yField = FLDY(field)
+    IF ABSO(xField) > ABSO(max_xField) THEN max_xField = xField
+    IF ABSO(yField) > ABSO(max_yField) THEN max_yField = yField
+NEXT
 
+init_fld_normalization = SYPR(110)
+IF ABSO(max_xField) < 1e-10
+    ! rotationally symmetric field
+    ! we set radial field normalization
+    SETSYSTEMPROPERTY 110, 0
+    max_xField = MAXF()
+    max_yField = MAXF()
+    flagRotSym = 1
+ELSE
+    SETSYSTEMPROPERTY 110, 1 
+    ! rectangular normalization
+    flagRotSym = 0
+ENDIF
+
+!-----------------------------------------------------------------------------
 apertureType = SYPR(10)
 ! 0 for entrance pupil diameter
 ! 1 for image space F/# 
@@ -208,6 +243,9 @@ id = OCOD("ENPP")
 entrPupilPos = OPEV(id, 0,0,0,0,0,0)
 id = OCOD("EXPP")
 exitPupilPos = OPEV(id, 0,0,0,0,0,0)
+
+!-----------------------------------------------------------------------------
+! prescription and raytrace
 
 surfCount = NSUR()
 ! surface numbers of first and last lens surfaces
@@ -283,6 +321,7 @@ FOR i, 1, surfCount, 1
     PRINT str$
     PRINT "    index@d  : ", $STR(GIND(i))
     PRINT "    abbe     : ", $STR(GABB(i))
+    PRINT "    diameter : ", $STR(2*SDIA(i))
     FOR ray, 1, selectedRayCount, 1
         IF ray == 1 
             PRINT "    axial_y  : {"
@@ -350,6 +389,10 @@ id = OCOD("DIMX")
 PRINT "    DIMX_percent: ", $STR(OPEV(id, 0, primaryWave, 0, 0, 0,0))
 PRINT "}"
 PRINT
+
+!-----------------------------------------------------------------------------
+! axial beams
+
 PRINT "axial_x: ["
 FOR coord, 1, Py_count, 1
     IF Py(coord) >= 0 
@@ -483,6 +526,10 @@ FOR coord, 1, Py_count, 1
 NEXT
 PRINT "]"
 PRINT
+
+!-----------------------------------------------------------------------------
+! oblique rays
+
 FORMAT 3 INT
 PRINT "field_type: ", fieldTypeID
 PRINT "# field types: "
@@ -490,9 +537,20 @@ PRINT "# 0 - degrees object space"
 PRINT "# 1 - object heigth in lens units"
 PRINT "# 2 - paraxial image height in lens units"
 PRINT "# 3 - real image heigth in lens units"
-PRINT "# full half-field angle or height"
+PRINT
+PRINT "# Entries:"
+PRINT "#    RANG: ray slope in radians"
+PRINT "#    RAGx: ray direction cosine"
+PRINT "#    h_1: chief ray height on first air-to-glass interface (s1)"
+PRINT "#    h_q: chief ray height on last glass-to-air interface (si-1)"
+PRINT
+PRINT "#Full half-field angle or height:"
 FORMAT 6.3
-str$ = "max_field: " + $STR(maxField)
+str$ = "max_field: " + $STR(MAXF())
+PRINT str$
+str$ = "max_xfield: " + $STR(max_xField)
+PRINT str$
+str$ = "max_yfield: " + $STR(max_yfield)
 PRINT str$
 PRINT 
 PRINT "fields: ["
@@ -503,8 +561,8 @@ FOR field, 1, fieldCount, 1
     ENDIF
     ! clockwise (positive) field angles are negative in Zemax
     ! so positive fields correspond to negative H coords
-    Hx(field) = -FLDX(field)/maxField
-    Hy(field) = -FLDY(field)/maxField
+    Hx(field) = -FLDX(field)/max_xField
+    Hy(field) = -FLDY(field)/max_yField
     PRINT "  {"
     FORMAT 2 INT
     PRINT "    no                      : ", field
@@ -618,8 +676,9 @@ FOR field, 1, fieldCount, 1
     str$ = "      REAR: " + $STR(OPEV(id,0,primaryWave,Hx(field),Hy(field),0,0))
     PRINT str$
     id = OCOD("DISG")
-    ! DISG(field, wave, Hx, Hy, Px, Py)
-    str$ = "      DISG: " + $STR(OPEV(id, maxField, primaryWave, Hx(field), Hy(field), 0, 0)) 
+    ! DISG(ref_field, wave, Hx, Hy, Px, Py)
+    ! matches Fcd output when reference field is axial, i.e ref_field = 1
+    str$ = "      DISG: " + $STR(OPEV(id, 1, primaryWave, Hx(field), Hy(field), 0, 0)) 
     PRINT str$
     PRINT "    },"
     PRINT "    tangential: ["
@@ -781,3 +840,5 @@ FOR field, 1, fieldCount, 1
     LABEL 101
 NEXT
 PRINT "]"
+
+SETSYSTEMPROPERTY 110, init_fld_normalization

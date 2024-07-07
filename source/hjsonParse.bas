@@ -451,6 +451,7 @@ Public Function jsonToDict(ByVal jsonContents As String) As Scripting.Dictionary
                 .Item("edge") = Val(.Item("edge"))
                 .Item("index@d") = Val(.Item("index@d"))
                 .Item("abbe") = Val(.Item("abbe"))
+                .Item("diameter") = Val(.Item("diameter"))
             End With
             Dim rtrNames(3) As String
             rtrNames(0) = "axial_y"
